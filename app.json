@@ -1,0 +1,12 @@
+{
+  "name": "mobile-motorist",
+  "displayName": "mobile-motorist",
+  "expo": {
+    "name": "mobile-motorist",
+    "slug": "mobile-motorist",
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ]
+  }
+}
