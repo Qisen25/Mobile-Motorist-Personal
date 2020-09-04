@@ -19,22 +19,15 @@ import * as TaskManager from "expo-task-manager";
 
 import { locationService } from './LocationService';
 
-
-
 const LOCATION_TASK_NAME = "background-location-task";
-
 
 export default class App extends Component {
 
 state = {
-    region: {
-      latitude: -31.922529,
-      longitude: 115.871549,
-      latitudeDelta: 0.0922,
-      longitudeDelta: 0.0421,
-    },
     latitude:0,
     longitude:0,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
 }
 
   onLocationUpdate = ({ latitude, longitude }) => {
@@ -47,14 +40,10 @@ state = {
 
 getInitialState() {
   return {
-    region: {
-      latitude: -31.922529,
-      longitude: 115.871549,
-      latitudeDelta: 0.0922,
-      longitudeDelta: 0.0421,
-    },
-    latitude:0,
-    longitude:0,
+    latitude: 0,
+    longitude: 0,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
   };
 }
 
@@ -83,8 +72,6 @@ onRegionChange = (region) => {
   })
 }
 
-
-//NOTE: In the blow render, MapView.region requires latitutdeDetla and longitudeDelta
 render(){
   return (
    
@@ -97,7 +84,7 @@ render(){
           
           <MapView style={styles.map}
 
-            region={{latitude:this.state.latitude,longitude:this.state.longitude}}
+            region={{latitude:this.state.latitude,longitude:this.state.longitude,latitudeDelta:this.state.latitudeDelta,longitudeDelta:this.state.longitudeDelta}}
             onRegionChange={this.onRegionChange}
           >
             <Marker 
@@ -127,13 +114,13 @@ render(){
 
 TaskManager.defineTask(LOCATION_TASK_NAME, ({ data, error }) => {
   if (error) {
-    // Error occurred - check `error.message` for more details.
     console.log("error")
     //return;
   }
   if (data) {
     //const { locations } = data;
     const { latitude, longitude } = data.locations[0].coords
+    console.log(data.locations)
     console.log(latitude, ' - ',longitude)
     locationService.setLocation({
       latitude,
