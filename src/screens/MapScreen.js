@@ -19,16 +19,49 @@ import * as TaskManager from "expo-task-manager";
 
 import { locationService } from './LocationService';
 
+import Sound from 'react-native-sound';
+
+
 const LOCATION_TASK_NAME = "background-location-task";
 
+function playSound(component){
+  const callback = (error, sound) =>{
+    if (error) {
+      console.log(error.message);
+      return;
+    }
+    sound.play(() => {
+      sound.release();
+    });
+
+  };
+  //Here...apply your customly loaded sound
+  url = require('../../done-for-you.mp3');
+  const sound = new Sound(url,error => callback(error,sound));
+}
+
+//Require state so use class over functional component
 export default class App extends Component {
+
+constructor(props) {
+    super(props);
+    Sound.setCategory('Playback',true);
+  }
 
 state = {
     latitude:0,
     longitude:0,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
+    cyclists:[{coordinate:{latitude:37.508,longitude:-122.34},key:1}],
 }
+
+  addCyclists({cyclists})
+  {
+    this.setState({
+      cyclists:cyclists
+    })
+  }
 
   onLocationUpdate = ({ latitude, longitude }) => {
     this.setState({
@@ -50,7 +83,7 @@ getInitialState() {
 componentDidMount = async () => {
   const { status } = await Location.requestPermissionsAsync();
     if (status === 'granted') {
-      console.log('granted')
+      //console.log('granted')
 
       //Testing
       locationService.subscribe(this.onLocationUpdate)
@@ -59,6 +92,7 @@ componentDidMount = async () => {
         accuracy: Location.Accuracy.Balanced,
       });
     }
+
 }
 
 //Testing
@@ -73,6 +107,7 @@ onRegionChange = (region) => {
 }
 
 render(){
+  //console.log("THIRD");
   return (
    
  <View style={styles.container}>
@@ -95,9 +130,13 @@ render(){
                 }
               }
               style={styles.map}
-            >
-            
-            </Marker>
+            />
+            {this.state.cyclists.map(marker =>(
+              <Marker
+                key={marker.key}
+                coordinate={marker.coordinate}
+              />
+            ))}
           </MapView>
 
         </View>
@@ -105,6 +144,9 @@ render(){
         <View style={styles.subContainer}>
           <Text>Lat: {this.state.latitude}</Text>
           <Text>Lng: {this.state.longitude}</Text>
+          <Button title="Sound" onPress={() => {
+            return playSound(this);
+          }}/>
         </View>
 
     </View>
@@ -120,8 +162,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, ({ data, error }) => {
   if (data) {
     //const { locations } = data;
     const { latitude, longitude } = data.locations[0].coords
-    console.log(data.locations)
-    console.log(latitude, ' - ',longitude)
+    //console.log(data.locations)
     locationService.setLocation({
       latitude,
       longitude
