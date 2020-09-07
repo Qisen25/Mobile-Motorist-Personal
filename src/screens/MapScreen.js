@@ -10,7 +10,7 @@ import {
   TextInput,
   Image,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Polyline, Marker } from 'react-native-maps';
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import { locationService } from './LocationService';
@@ -21,11 +21,21 @@ import Sound from 'react-native-sound';
 
 const LOCATION_TASK_NAME = "background-location-task";
 
+const COLORS = [
+  '#7F0000',
+  '#00000000',
+  '#B24112',
+  '#E5845C',
+  '#238C23',
+  '#7F0000',
+];
+
 export default class App extends Component {
 
   constructor(props){
       super(props);
       Sound.setCategory('Playback',true);
+
       this.state = {
         latitude:0,
         longitude:0,
@@ -33,8 +43,8 @@ export default class App extends Component {
         longitudeDelta: 0.0421,
         cyclists:[],
         mapText:"",
+        route:[],
       }
-      routeRetriever();
   }
 
   playSound(component){
@@ -48,7 +58,7 @@ export default class App extends Component {
       });
 
     };
-    const url = require('../../done-for-you.mp3');
+    const url = require('../../assets/done-for-you.mp3');
     const sound = new Sound(url,error => callback(error,sound));
   }
 
@@ -109,14 +119,21 @@ export default class App extends Component {
   }
 
   handleRoute = (value) => {
-    //Validate input
-
     this.setState({
       mapText:value
     })
+  }
 
-    //Draw the new route.
+  getRoute = async () => {
+    startPoint = {latitude:this.state.latitude,longitude:this.state.longitude}
+    var routeCoordinates = await routeRetriever(start=startPoint,end=this.state.mapText);
+    console.log(routeCoordinates);
 
+    var coordinates = routeCoordinates.map((array) =>
+      ({latitude:array[0],longitude:array[1]})
+    )
+
+    this.setState({route:coordinates});
   }
 
   render(){
@@ -145,6 +162,7 @@ export default class App extends Component {
                 }
                 style={styles.map}
               />
+
               {
                 this.state.cyclists.map(marker =>(
                   <Marker
@@ -160,6 +178,22 @@ export default class App extends Component {
                     />
                   </Marker>))
               }
+
+              <Polyline
+                coordinates={this.state.route}
+                strokeColor="#000"
+                strokeColors={COLORS}
+                strokeWidth={6}
+              />
+
+              {this.state.cyclists.map(marker =>(
+                <Marker
+                  key={marker.key}
+                  coordinate={marker.coordinate}
+                  style={styles.map}
+                />
+              ))}
+
             </MapView>
 
           </View>
@@ -169,8 +203,9 @@ export default class App extends Component {
               return this.playSound(this);
             }}/>
             <TextInput style={styles.textInput} onChangeText={this.handleRoute}/>
-            <Button title="Enter Destingation"/>
-            <Text>Test Element: {this.state.mapText}</Text>
+            <Button title="Enter Destingation" onPress={() => {
+              return this.getRoute();
+            }}/>
           </View>
 
       </View>
