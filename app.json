@@ -9,13 +9,12 @@
       "**/*"
     ],
    "ios": {
-
         "infoPlist": {
           "UIBackgroundModes": [
             "location",
             "fetch"
           ]
         }
-      }
+      },
   }
 }
