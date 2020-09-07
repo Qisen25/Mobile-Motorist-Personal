@@ -15,6 +15,7 @@ import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import { locationService } from './LocationService';
 import  routeRetriever  from '../utils/RouteRetriever';
+import ws from '../utils/ReusableWebSocket';
 
 import Sound from 'react-native-sound';
 
@@ -51,12 +52,12 @@ export default class App extends Component {
     const sound = new Sound(url,error => callback(error,sound));
   }
 
-  addCyclists({cyclists}){
+  addCyclists(cyclists){
     this.setState({
-      cyclists:cyclists
+      cyclists: cyclists
     })
   }
-
+  
   onLocationUpdate = ({ latitude, longitude }) => {
     this.setState({
       latitude: latitude,
@@ -78,6 +79,27 @@ export default class App extends Component {
 
   componentWillUnmount = async () => {
     locationService.unsubscribe(this.onLocationUpdate);
+  }
+
+  // This is called when the users location changes
+  usersLocationChange = (coords) => {
+    // TEST QUERY
+    let motorRequest = {
+      'type': 'motorist',
+      'userID': 'some_id',
+      'long': this.state.longitude,
+      'lat': this.state.latitude,
+      'direction': '23',
+      'speed': '19'
+    };
+    // Need to query for cyclists
+    ws.send(motorRequest);
+
+    // Update the markers
+    let points = ws.getCyclists();
+    this.addCyclists(points);
+
+    //TODO: Potentially place the Alert Detection Here
   }
 
   onRegionChange = (region) => {
@@ -110,6 +132,9 @@ export default class App extends Component {
 
               region={{latitude:this.state.latitude,longitude:this.state.longitude,latitudeDelta:this.state.latitudeDelta,longitudeDelta:this.state.longitudeDelta}}
               onRegionChange={this.onRegionChange}
+              onUserLocationChange={this.usersLocationChange}
+              showsUserLocation={true}
+              minZoomLevel={18}
             >
               <Marker 
                 coordinate={
@@ -120,12 +145,21 @@ export default class App extends Component {
                 }
                 style={styles.map}
               />
-              {this.state.cyclists.map(marker =>(
-                <Marker
-                  key={marker.key}
-                  coordinate={marker.coordinate}
-                />
-              ))}
+              {
+                this.state.cyclists.map(marker =>(
+                  <Marker
+                    key={marker.key}
+                    coordinate={{
+                      latitude: marker.latitude,
+                      longitude: marker.longitude}}
+                  >
+                    <Image
+                      source={require('../../assets/bikeIcon.png')}
+                      style={{width: 28, height: 28}}
+                      resizeMode="contain"
+                    />
+                  </Marker>))
+              }
             </MapView>
 
           </View>
