@@ -9,55 +9,49 @@ import {
   Button,
   TextInput,
   Image,
-  TouchableOpacity,
 } from 'react-native';
-
 import MapView, { Marker } from 'react-native-maps';
-
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
-
 import { locationService } from './LocationService';
+import  routeRetriever  from '../utils/RouteRetriever';
 
 import Sound from 'react-native-sound';
 
-
 const LOCATION_TASK_NAME = "background-location-task";
 
-function playSound(component){
-  const callback = (error, sound) =>{
-    if (error) {
-      console.log(error.message);
-      return;
-    }
-    sound.play(() => {
-      sound.release();
-    });
-
-  };
-  //Here...apply your customly loaded sound
-  url = require('../../done-for-you.mp3');
-  const sound = new Sound(url,error => callback(error,sound));
-}
-
-//Require state so use class over functional component
 export default class App extends Component {
 
-constructor(props) {
-    super(props);
-    Sound.setCategory('Playback',true);
+  constructor(props){
+      super(props);
+      Sound.setCategory('Playback',true);
+      this.state = {
+        latitude:0,
+        longitude:0,
+        latitudeDelta: 0.0922,
+        longitudeDelta: 0.0421,
+        cyclists:[],
+        mapText:"",
+      }
+      routeRetriever();
   }
 
-state = {
-    latitude:0,
-    longitude:0,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-    cyclists:[{coordinate:{latitude:37.508,longitude:-122.34},key:1}],
-}
+  playSound(component){
+    const callback = (error, sound) =>{
+      if (error) {
+        console.log(error.message);
+        return;
+      }
+      sound.play(() => {
+        sound.release();
+      });
 
-  addCyclists({cyclists})
-  {
+    };
+    const url = require('../../done-for-you.mp3');
+    const sound = new Sound(url,error => callback(error,sound));
+  }
+
+  addCyclists({cyclists}){
     this.setState({
       cyclists:cyclists
     })
@@ -70,105 +64,97 @@ state = {
     })
   }
 
+  componentDidMount = async () => {
+    const { status } = await Location.requestPermissionsAsync();
+      if (status === 'granted') {
 
-getInitialState() {
-  return {
-    latitude: 0,
-    longitude: 0,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  };
-}
+        locationService.subscribe(this.onLocationUpdate)
 
-componentDidMount = async () => {
-  const { status } = await Location.requestPermissionsAsync();
-    if (status === 'granted') {
-      //console.log('granted')
+        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+          accuracy: Location.Accuracy.Balanced,
+        });
+      }
+  }
 
-      //Testing
-      locationService.subscribe(this.onLocationUpdate)
+  componentWillUnmount = async () => {
+    locationService.unsubscribe(this.onLocationUpdate);
+  }
 
-      await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-        accuracy: Location.Accuracy.Balanced,
-      });
-    }
+  onRegionChange = (region) => {
+    this.setState({
+      region : region
+    })
+  }
 
-}
+  handleRoute = (value) => {
+    //Validate input
 
-//Testing
-componentWillUnmount() {
-  locationService.unsubscribe(this.onLocationUpdate)
-}
+    this.setState({
+      mapText:value
+    })
 
-onRegionChange = (region) => {
-  this.setState({
-    region : region
-  })
-}
+    //Draw the new route.
 
-render(){
-  //console.log("THIRD");
-  return (
-   
- <View style={styles.container}>
-        <View style={styles.logoContainer}>
-          <Image style={styles.logo} source={require("../../assets/expektus-logo.png")} />
-        </View>
+  }
 
-        <View style={styles.mapContainer} >
-          
-          <MapView style={styles.map}
+  render(){
+    return (
+   <View style={styles.container}>
+          <View style={styles.logoContainer}>
+            <Image style={styles.logo} source={require("../../assets/expektus-logo.png")} />
+          </View>
 
-            region={{latitude:this.state.latitude,longitude:this.state.longitude,latitudeDelta:this.state.latitudeDelta,longitudeDelta:this.state.longitudeDelta}}
-            onRegionChange={this.onRegionChange}
-          >
-            <Marker 
-              coordinate={
-               {
-                  latitude:this.state.latitude,
-                  longitude:this.state.longitude,
+          <View style={styles.mapContainer} >
+            
+            <MapView style={styles.map}
+
+              region={{latitude:this.state.latitude,longitude:this.state.longitude,latitudeDelta:this.state.latitudeDelta,longitudeDelta:this.state.longitudeDelta}}
+              onRegionChange={this.onRegionChange}
+            >
+              <Marker 
+                coordinate={
+                 {
+                    latitude:this.state.latitude,
+                    longitude:this.state.longitude,
+                  }
                 }
-              }
-              style={styles.map}
-            />
-            {this.state.cyclists.map(marker =>(
-              <Marker
-                key={marker.key}
-                coordinate={marker.coordinate}
+                style={styles.map}
               />
-            ))}
-          </MapView>
+              {this.state.cyclists.map(marker =>(
+                <Marker
+                  key={marker.key}
+                  coordinate={marker.coordinate}
+                />
+              ))}
+            </MapView>
 
-        </View>
+          </View>
 
-        <View style={styles.subContainer}>
-          <Text>Lat: {this.state.latitude}</Text>
-          <Text>Lng: {this.state.longitude}</Text>
-          <Button title="Sound" onPress={() => {
-            return playSound(this);
-          }}/>
-        </View>
+          <View style={styles.subContainer}>
+            <Button title="Test Element: Sound" onPress={() => {
+              return this.playSound(this);
+            }}/>
+            <TextInput style={styles.textInput} onChangeText={this.handleRoute}/>
+            <Button title="Enter Destingation"/>
+            <Text>Test Element: {this.state.mapText}</Text>
+          </View>
 
-    </View>
-    )
+      </View>
+      )
   }
 }
 
 TaskManager.defineTask(LOCATION_TASK_NAME, ({ data, error }) => {
   if (error) {
     console.log("error")
-    //return;
+    return
   }
   if (data) {
-    //const { locations } = data;
     const { latitude, longitude } = data.locations[0].coords
-    //console.log(data.locations)
     locationService.setLocation({
       latitude,
       longitude
-    })
-    // do something with the locations captured in the background
-
+    });
   }
 });
 
@@ -201,6 +187,11 @@ const styles = StyleSheet.create({
   marker:{
     width: 20,
     height:20,
+  },
+  textInput:{
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
   }
 })
 
