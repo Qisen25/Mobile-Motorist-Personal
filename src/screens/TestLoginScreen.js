@@ -1,6 +1,9 @@
 import React, { useContext } from "react";
 import { StyleSheet, View, Image, Button } from "react-native";
 import { SocialIcon } from "react-native-elements";
+import ws from "../utils/ReusableWebSocket";
+
+const TEST_AUTHENTICATION = "testMotor";
 
 /**
  * Component for the login screen.
@@ -17,9 +20,13 @@ export default function LoginScreen({navigation}) {
       <View style={styles.buttonsContainer}>
         <Button
           title="TEST SIGN IN"
-          onPress={() =>
+          onPress={() => {
+            // Start the Web Socket Connection
+            ws.setHeaders({ headers: { authorisation: TEST_AUTHENTICATION } });
+            ws.connect();
+
             navigation.navigate("MapScreen")
-          }
+          }}
         />
         <SocialIcon
           button
