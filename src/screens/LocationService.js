@@ -1,3 +1,4 @@
+//https://forums.expo.io/t/how-to-setstate-from-within-taskmanager/26630/5
 const LocationService = () => {
   let subscribers = []
   let location = {
