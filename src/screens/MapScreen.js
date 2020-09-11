@@ -213,6 +213,7 @@ export default class App extends Component {
   }
 }
 
+// Example code used:https://docs.expo.io/versions/latest/sdk/task-manager/#taskmanagerdefinetasktaskname-task
 TaskManager.defineTask(LOCATION_TASK_NAME, ({ data, error }) => {
   if (error) {
     console.log("error")
