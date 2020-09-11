@@ -17,6 +17,7 @@ import { locationService } from './LocationService';
 import  routeRetriever  from '../utils/RouteRetriever';
 import ws from '../utils/ReusableWebSocket';
 
+// For sound functionality, basic usage example from: https://github.com/zmxv/react-native-sound was used.
 import Sound from 'react-native-sound';
 
 const LOCATION_TASK_NAME = "background-location-task";
