@@ -16,6 +16,9 @@ import * as TaskManager from "expo-task-manager";
 import { locationService } from './LocationService';
 import  routeRetriever  from '../utils/RouteRetriever';
 import ws from '../utils/ReusableWebSocket';
+const { Motorist } = require("../../node_modules/alert-system/src/motorist");
+const { Cyclist } = require("../../node_modules/alert-system/src/cyclist");
+const { CollisionDetector } = require("../../node_modules/alert-system/src/collisionDetector");
 
 // For sound functionality, basic usage example from: https://github.com/zmxv/react-native-sound was used.
 import Sound from 'react-native-sound';
@@ -40,9 +43,12 @@ export default class App extends Component {
       this.state = {
         latitude:0,
         longitude:0,
+        direction:0,
+        speed:0,
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
         cyclists:[],
+        hazards:[],
         mapText:"",
         route:[],
       }
@@ -69,10 +75,12 @@ export default class App extends Component {
     })
   }
   
-  onLocationUpdate = ({ latitude, longitude }) => {
+  onLocationUpdate = ({ latitude, longitude, speed, direction }) => {
     this.setState({
       latitude: latitude,
-      longitude: longitude
+      longitude: longitude,
+      speed: speed,
+      direction: direction
     })
   }
 
@@ -83,7 +91,8 @@ export default class App extends Component {
         locationService.subscribe(this.onLocationUpdate)
 
         await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-          accuracy: Location.Accuracy.Balanced,
+          accuracy: Location.Accuracy.BestForNavigation,
+          distanceInterval: 1,
         });
       }
   }
@@ -100,17 +109,67 @@ export default class App extends Component {
       'userID': 'some_id',
       'long': this.state.longitude,
       'lat': this.state.latitude,
-      'direction': '23',
-      'speed': '19'
+      'direction': this.state.direction,
+      'speed': this.state.speed
     };
     // Need to query for cyclists
+    console.log(`Sending: ${JSON.stringify(motorRequest)}`);
     ws.send(motorRequest);
 
     // Update the markers
     let points = ws.getCyclists();
-    this.addCyclists(points);
+    console.log(points);
+    //this.addCyclists(points);
 
-    //TODO: Potentially place the Alert Detection Here
+    // Call the Hazard Detection after receiving the nearby points
+    let warnings = this.callHazardDetection(points)
+
+    console.log(`Hazards: ${warnings}`);
+    /*
+    if(warnings === undefined) {
+      warnings = [];
+    }*/
+
+    // Update the state
+    this.setState({
+      cyclists: points,
+      hazards: warnings
+    })
+
+    // Play the Hazard sound if a hazard has been detected
+    if(warnings !==null && warnings !== undefined) {
+      if(warnings.length > 0) {
+        this.playSound(this);
+      }
+    }
+  }
+
+  callHazardDetection = (points) => {
+    const motorist = new Motorist("motorist", this.state.longitude,
+                                  this.state.latitude, 
+                                  this.state.speed,
+                                  this.state.direction);
+    let cyclists = [];
+    let warnings = [];
+
+    points.forEach(user => {
+      let bike = new Cyclist(user.key, user.longitude, user.latitude,
+                              user.speed, user.direction);
+      cyclists.push(bike);
+    });
+
+    // Run the Hazard Detection
+    let detector = new CollisionDetector();
+    if(cyclists.length >= 1) {
+      warnings = detector.updateState(motorist, cyclists);
+    }
+
+    if(warnings === null || warnings === undefined) {
+      return [];
+    }
+    else {
+      return warnings.hazards;
+    }
   }
 
   onRegionChange = (region) => {
@@ -154,15 +213,6 @@ export default class App extends Component {
               showsUserLocation={true}
               minZoomLevel={18}
             >
-              <Marker 
-                coordinate={
-                 {
-                    latitude:this.state.latitude,
-                    longitude:this.state.longitude,
-                  }
-                }
-                style={styles.map}
-              />
 
               {
                 this.state.cyclists.map(marker =>(
@@ -187,13 +237,6 @@ export default class App extends Component {
                 strokeWidth={6}
               />
 
-              {this.state.cyclists.map(marker =>(
-                <Marker
-                  key={marker.key}
-                  coordinate={marker.coordinate}
-                  style={styles.map}
-                />
-              ))}
 
             </MapView>
 
@@ -216,16 +259,19 @@ export default class App extends Component {
 
 // Example code used:https://docs.expo.io/versions/latest/sdk/task-manager/#taskmanagerdefinetasktaskname-task
 TaskManager.defineTask(LOCATION_TASK_NAME, ({ data, error }) => {
+  const timeStamp = new Date();
   if (error) {
     console.log("error")
     return
   }
-  if (data) {
+  if (data.locations.length >= 1) {
     const { latitude, longitude } = data.locations[0].coords
-    locationService.setLocation({
-      latitude,
-      longitude
-    });
+    const speed = data.locations[0].coords.speed;
+    const direction = data.locations[0].coords.heading;
+
+    locationService.setLocation({latitude, longitude, speed, direction});
+
+    console.log(`Location Recorded: [${timeStamp}]:\n[${latitude}, ${longitude}, ${direction}, ${speed}]`);
   }
 });
 
