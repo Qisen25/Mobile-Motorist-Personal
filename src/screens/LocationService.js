@@ -3,7 +3,9 @@ const LocationService = () => {
   let subscribers = []
   let location = {
     latitude: 0,
-    longitude: 0
+    longitude: 0,
+    speed: 0,
+    direction: 0
   }
 
   return {
