@@ -51,6 +51,7 @@ export default class App extends Component {
         hazards:[],
         mapText:"",
         route:[],
+        intervalID: null
       }
   }
 
@@ -94,11 +95,20 @@ export default class App extends Component {
           accuracy: Location.Accuracy.BestForNavigation,
           distanceInterval: 1,
         });
+
+        const id = setInterval(() => {
+          this.usersLocationChange();
+        }, 1000);
+
+        this.setState({
+          intervalID: id
+        });
       }
   }
 
   componentWillUnmount = async () => {
     locationService.unsubscribe(this.onLocationUpdate);
+    clearInterval(this.state.intervalID);
   }
 
   // This is called when the users location changes
@@ -209,7 +219,6 @@ export default class App extends Component {
 
               region={{latitude:this.state.latitude,longitude:this.state.longitude,latitudeDelta:this.state.latitudeDelta,longitudeDelta:this.state.longitudeDelta}}
               onRegionChange={this.onRegionChange}
-              onUserLocationChange={this.usersLocationChange}
               showsUserLocation={true}
               minZoomLevel={18}
             >
