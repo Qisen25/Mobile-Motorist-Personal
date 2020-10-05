@@ -236,12 +236,14 @@ export default class App extends Component {
     startPoint = {latitude:this.state.latitude,longitude:this.state.longitude}
     var routeCoordinates = await routeRetriever(start=startPoint,end=this.state.mapText);
     console.log(routeCoordinates);
+    
+    if (routeCoordinates != undefined) {
+      var coordinates = routeCoordinates.map((array) =>
+        ({latitude:array[0],longitude:array[1]})
+      )
 
-    var coordinates = routeCoordinates.map((array) =>
-      ({latitude:array[0],longitude:array[1]})
-    )
-
-    this.setState({route:coordinates});
+      this.setState({route:coordinates});
+    }
   }
 
   render(){
