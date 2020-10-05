@@ -1,9 +1,4 @@
 PODS:
-  - AppAuth (1.4.0):
-    - AppAuth/Core (= 1.4.0)
-    - AppAuth/ExternalUserAgent (= 1.4.0)
-  - AppAuth/Core (1.4.0)
-  - AppAuth/ExternalUserAgent (1.4.0)
   - boost-for-react-native (1.63.0)
   - CocoaAsyncSocket (7.6.4)
   - CocoaLibEvent (1.0.0)
@@ -19,9 +14,6 @@ PODS:
   - EXFont (8.2.2):
     - UMCore
     - UMFontInterface
-  - EXGoogleSignIn (8.2.1):
-    - GoogleSignIn (~> 5.0.2)
-    - UMCore
   - EXImageLoader (1.1.1):
     - React-Core
     - UMCore
@@ -115,18 +107,6 @@ PODS:
     - DoubleConversion
     - glog
   - glog (0.3.5)
-  - GoogleSignIn (5.0.2):
-    - AppAuth (~> 1.2)
-    - GTMAppAuth (~> 1.0)
-    - GTMSessionFetcher/Core (~> 1.1)
-  - GTMAppAuth (1.0.0):
-    - AppAuth/Core (~> 1.0)
-    - GTMSessionFetcher (~> 1.1)
-  - GTMSessionFetcher (1.4.0):
-    - GTMSessionFetcher/Full (= 1.4.0)
-  - GTMSessionFetcher/Core (1.4.0)
-  - GTMSessionFetcher/Full (1.4.0):
-    - GTMSessionFetcher/Core (= 1.4.0)
   - OpenSSL-Universal (1.0.2.19):
     - OpenSSL-Universal/Static (= 1.0.2.19)
   - OpenSSL-Universal/Static (1.0.2.19)
@@ -396,7 +376,6 @@ DEPENDENCIES:
   - EXErrorRecovery (from `../node_modules/expo-error-recovery/ios`)
   - EXFileSystem (from `../node_modules/expo-file-system/ios`)
   - EXFont (from `../node_modules/expo-font/ios`)
-  - EXGoogleSignIn (from `../node_modules/expo-google-sign-in/ios`)
   - EXImageLoader (from `../node_modules/expo-image-loader/ios`)
   - EXKeepAwake (from `../node_modules/expo-keep-awake/ios`)
   - EXLinearGradient (from `../node_modules/expo-linear-gradient/ios`)
@@ -475,7 +454,6 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
-    - AppAuth
     - boost-for-react-native
     - CocoaAsyncSocket
     - CocoaLibEvent
@@ -486,9 +464,6 @@ SPEC REPOS:
     - Flipper-PeerTalk
     - Flipper-RSocket
     - FlipperKit
-    - GoogleSignIn
-    - GTMAppAuth
-    - GTMSessionFetcher
     - OpenSSL-Universal
     - YogaKit
 
@@ -503,8 +478,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-file-system/ios"
   EXFont:
     :path: "../node_modules/expo-font/ios"
-  EXGoogleSignIn:
-    :path: "../node_modules/expo-google-sign-in/ios"
   EXImageLoader:
     :path: "../node_modules/expo-image-loader/ios"
   EXKeepAwake:
@@ -613,7 +586,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
-  AppAuth: 31bcec809a638d7bd2f86ea8a52bd45f6e81e7c7
   boost-for-react-native: 39c7adb57c4e60d6c5479dd8623128eb5b3f0f2c
   CocoaAsyncSocket: 694058e7c0ed05a9e217d1b3c7ded962f4180845
   CocoaLibEvent: 2fab71b8bd46dd33ddb959f7928ec5909f838e3f
@@ -622,7 +594,6 @@ SPEC CHECKSUMS:
   EXErrorRecovery: 59499558ff624ba190bc3c3ff9d5b8e983edcb18
   EXFileSystem: 8d1dc2924d62046275c84d70b88fa3aa7daeb116
   EXFont: 5c464ce400b92f87f907d68093c29946177295bf
-  EXGoogleSignIn: b2dc0637bf4398ed3054d0b5d665f39f89df735d
   EXImageLoader: 8366cb1a7d207a241a1bfaa4c5ab4859cf72d507
   EXKeepAwake: 1c77f2d31eafaea3410c00957669f306f340b843
   EXLinearGradient: d25940ede1e798882f57715cff9edb4075d95e2d
@@ -643,9 +614,6 @@ SPEC CHECKSUMS:
   FlipperKit: 6dc9b8f4ef60d9e5ded7f0264db299c91f18832e
   Folly: 30e7936e1c45c08d884aa59369ed951a8e68cf51
   glog: 1f3da668190260b06b429bb211bfbee5cd790c28
-  GoogleSignIn: 7137d297ddc022a7e0aa4619c86d72c909fa7213
-  GTMAppAuth: 4deac854479704f348309e7b66189e604cf5e01e
-  GTMSessionFetcher: 6f5c8abbab8a9bce4bb3f057e317728ec6182b10
   OpenSSL-Universal: 8b48cc0d10c1b2923617dfe5c178aa9ed2689355
   RCTRequired: cec6a34b3ac8a9915c37e7e4ad3aa74726ce4035
   RCTTypeSafety: 93006131180074cffa227a1075802c89a49dd4ce
