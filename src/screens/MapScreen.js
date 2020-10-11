@@ -10,7 +10,7 @@ import {
   TextInput,
   Image,
 } from 'react-native';
-import MapView, { Polyline, Marker } from 'react-native-maps';
+import MapView, { Polyline, Marker, Circle } from 'react-native-maps';
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import { locationService } from './LocationService';
@@ -112,7 +112,6 @@ export default class App extends Component {
     }
   }
 
-
   onLocationUpdate = ({ latitude, longitude, speed, direction }) => {
     this.setState({
       latitude: latitude,
@@ -151,7 +150,7 @@ export default class App extends Component {
 
   // This is called when the users location changes
   usersLocationChange = (coords) => {
-    // TEST QUERY
+
     let motorRequest = {
       'type': 'motorist',
       'userID': 'some_id',
@@ -232,6 +231,51 @@ export default class App extends Component {
     })
   }
 
+  /**
+   * @returns JSX object that represents drawing the Motorist Marker on the Map
+   */
+  drawMotorist = () => {
+    // Variables
+    const motoristRadius = 6;
+    const drawRadius = true;
+    const showSpeed = true;
+
+    return (
+      <View>
+        <Marker
+          coordinate={{
+            latitude: this.state.latitude,
+            longitude: this.state.longitude}}
+          anchor={{
+            x: 0.5,
+            y: 0.5
+          }}
+          title={`${this.state.speed.toFixed(2)} m/s`}
+        >
+        <Image
+          source={require('../../assets/Arrow.png')}
+          style={{
+            width: 28,
+            height: 28,
+            transform: [{
+              rotate: `${this.state.direction}deg`
+            }]}}
+          resizeMode="contain"
+        />
+      </Marker>
+      {
+        // Conditionally Draw the circle based on flag
+        drawRadius &&
+        <Circle 
+          center={{
+            latitude: this.state.latitude,
+            longitude: this.state.longitude}}
+          radius={motoristRadius}
+        />
+      }
+      </View>);
+  }
+
   getRoute = async () => {
     startPoint = {latitude:this.state.latitude,longitude:this.state.longitude}
     var routeCoordinates = await routeRetriever(start=startPoint,end=this.state.mapText);
@@ -259,11 +303,11 @@ export default class App extends Component {
 
               region={{latitude:this.state.latitude,longitude:this.state.longitude,latitudeDelta:this.state.latitudeDelta,longitudeDelta:this.state.longitudeDelta}}
               onRegionChange={this.onRegionChange}
-              showsUserLocation={true}
-              minZoomLevel={18}
+              minZoomLevel={19}
             >
 
               {
+                // Draw the Cyclists
                 this.state.cyclists.map(marker =>(
                   <Marker
                     key={marker.key}
@@ -277,6 +321,11 @@ export default class App extends Component {
                       resizeMode="contain"
                     />
                   </Marker>))
+              }
+
+              {
+                // Draw the Motorist
+                this.drawMotorist()
               }
 
               <Polyline
