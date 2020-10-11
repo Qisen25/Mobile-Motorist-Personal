@@ -21,10 +21,13 @@ const { Motorist } = require("../../node_modules/alert-system/src/motorist");
 const { Cyclist } = require("../../node_modules/alert-system/src/cyclist");
 const { CollisionDetector } = require("../../node_modules/alert-system/src/collisionDetector");
 
+import RNFS from "react-native-fs";
+
 // For sound functionality, basic usage example from: https://github.com/zmxv/react-native-sound was used.
 import Sound from 'react-native-sound';
 
 const LOCATION_TASK_NAME = "background-location-task";
+const GPS_LOG_FILE = "GPS_LOGS.txt";
 
 const COLORS = [
   '#7F0000',
@@ -57,7 +60,9 @@ export default class App extends Component {
         hazards:[],
         mapText:"",
         route:[],
-        intervalID: null
+        intervalID: null,
+        logging: false,
+        logTag: "default"
       }
   }
 
@@ -141,6 +146,18 @@ export default class App extends Component {
           intervalID: id
         });
       }
+
+      let path = RNFS.DocumentDirectoryPath + '/' + GPS_LOG_FILE;
+      if(!RNFS.exists(path)) {
+        RNFS.writeFile(path, 'GPS Log:\n', 'utf8')
+          .then((success) => {
+            console.log('FILE WRITTEN!');
+            console.log(RNFS.DocumentDirectoryPath + '/' + GPS_LOG_FILE);
+          })
+          .catch((err) => {
+            console.log(err.message);
+          });
+      }
   }
 
   componentWillUnmount = async () => {
@@ -162,6 +179,17 @@ export default class App extends Component {
     // Need to query for cyclists
     console.log(`Sending: ${JSON.stringify(motorRequest)}`);
     ws.send(motorRequest);
+
+    // Check if logging
+    if(this.state.logging) {
+      let path = RNFS.DocumentDirectoryPath + '/' + GPS_LOG_FILE;
+      RNFS.appendFile(path, `${this.state.logTag} => ${JSON.stringify(motorRequest)}\n`, 'utf8')
+          .then((success) => {
+          })
+          .catch((err) => {
+            console.log(err.message);
+          });
+    }
 
     // Update the markers
     let points = ws.getCyclists();
@@ -337,7 +365,29 @@ export default class App extends Component {
 
 
             </MapView>
-
+            <View
+              style={styles.loggingStyle}>
+                {
+                  this.state.logging &&
+                  <Button title="Log"
+                    color="#FF0000"
+                    onPress={() => {this.setState({
+                      logging: false
+                    })}}/>
+                }
+                {
+                  !this.state.logging &&
+                  <Button title="Log"
+                    color="#F4860B"
+                    onPress={() => {this.setState({
+                      logging: true
+                    })}}/>
+                }
+                <TextInput style={styles.textInput} onSubmitEditing={(event) => {
+                  this.state.logTag = event.nativeEvent.text;
+                }}
+                placeholder={"Enter TAG"}/>
+            </View>
           </View>
 
           <View style={styles.subContainer}>
@@ -407,6 +457,11 @@ const styles = StyleSheet.create({
     height: 40,
     borderColor: 'gray',
     borderWidth: 1,
+  },
+  loggingStyle:{
+    position: "absolute",
+    top: "0%",
+    flexDirection: "row"
   }
 })
 
