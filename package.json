@@ -31,7 +31,7 @@
     "react-native-unimodules": "~0.10.1",
     "react-native-web": "~0.11.7",
     "ws": "^7.3.1",
-    "alert-system": "git+https://github.com/Expektus/alert-system.git"
+    "alert-system": "git@github.com:Expektus/alert-system.git"
   },
   "devDependencies": {
     "@babel/core": "~7.9.0",
