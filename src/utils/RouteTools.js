@@ -2,16 +2,15 @@ import React from "react";
 import {
   multiply
 } from "mathjs";
+//import { TestScheduler } from "jest";
 
-const GPSADJUSTER = 111139;
-
-export function adjustPoint(point, x_t, y_t) {
-  point = [point[0] + x_t, point[1] + y_t];
-  return point;
+function adjustPoint(point, x_t, y_t) {
+	point = [point[0] + x_t, point[1] + y_t];
+	return point;
 }
 
-export function rotateToXAxis(point) {
-	theta = Math.atan(point[1] / point[0]);
+function rotateToXAxis(point) {
+	theta = Math.atan2(point[1], point[0]);
 	inv_theta = -1 * theta;
 	// Matrix multiplication
 	rotator = [[Math.cos(inv_theta), Math.sin(inv_theta)], [-1 * Math.sin(inv_theta), Math.cos(inv_theta)]];
@@ -19,25 +18,25 @@ export function rotateToXAxis(point) {
 	return rotatedPoint;
 }
 
-export function withinRectangle(rectangle, adjPoint) {
+function withinRectangle(rectangle, adjPoint) {
 	const top_left = rectangle.tl;
-    const bottom_left = rectangle.bl;
-    const top_right = rectangle.tr;
-    const bottom_right = rectangle.br;
+	const bottom_left = rectangle.bl;
+	const top_right = rectangle.tr;
+	const bottom_right = rectangle.br;
 
-    if (adjPoint[0] > top_left[0] && adjPoint[1] < top_left[1]) {
-    	if (adjPoint[0] > bottom_left[0] && adjPoint[1] > bottom_left[1]) {
-    		if (adjPoint[0] < top_right[0] && adjPoint[1] < top_right[1]) {
-    			if (adjPoint[0] < bottom_right[0] && adjPoint[1] > bottom_right[1]) {
-    				return true;
-    			}
-    		}
-    	}
-    }
-    return false;
+	if (adjPoint[0] > top_left[0] && adjPoint[1] < top_left[1]) {
+		if (adjPoint[0] > bottom_left[0] && adjPoint[1] > bottom_left[1]) {
+			if (adjPoint[0] < top_right[0] && adjPoint[1] < top_right[1]) {
+				if (adjPoint[0] < bottom_right[0] && adjPoint[1] > bottom_right[1]) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
 }
 
-export function adjustEdgeAndCurrent(edge, currentPoint) {
+function adjustEdgeAndCurrent(edge, currentPoint) {
 	const n0 = edge[0];
 	const n1 = edge[1];
 	const nCP = currentPoint;
@@ -48,7 +47,7 @@ export function adjustEdgeAndCurrent(edge, currentPoint) {
 	return { edge: [[0, 0], adj_n1], currentPoint: adj_nCP };
 }
 
-export function rotateEdgeAndCurrent(edge, currentPoint) {
+function rotateEdgeAndCurrent(edge, currentPoint) {
 	n0 = edge[0];
 	adj_n1 = edge[1];
 	adj_nCP = currentPoint;
@@ -59,7 +58,7 @@ export function rotateEdgeAndCurrent(edge, currentPoint) {
 	return { edge: [[0, 0], rot_n1], currentPoint: rot_nCP };
 }
 
-export function createRectangle(edge, adj_translation) {
+function createRectangle(edge, adj_translation) {
 	rot_n0 = edge[0];
 	rot_n1 = edge[1];
 
@@ -73,7 +72,7 @@ export function createRectangle(edge, adj_translation) {
 }
 
 // Non Adjusted GPS values
-export function findEdgeOrientation(edge) {
+function findEdgeOrientation(edge) {
 	n0 = edge[0];
 	n1 = edge[1];
 
@@ -89,10 +88,15 @@ export function findEdgeOrientation(edge) {
 	// console.log("Radians: ",Bearing)
 	// console.log("Degrees: ",(Bearing/adjuster))
 	degrees = Bearing / adjuster;
+	
 	return degrees;
 }
 
-export function findCurrentEdge(route, currentPoint, checkMax, MOE_M) {
+function findCurrentEdge(route, currentPoint, checkMax) {
+	const GPSADJUSTER = 111139;
+	//Margin of Error for Metres
+	const MOE_M = 20.0//10.0;
+
 	const length = route.length;
 	var position = -1;
 	var counter = 0;
@@ -102,18 +106,94 @@ export function findCurrentEdge(route, currentPoint, checkMax, MOE_M) {
 		adjEC = adjustEdgeAndCurrent(edge, currentPoint);
 		a_edge = adjEC.edge;
 		a_currentPoint = adjEC.currentPoint;
-
+		
 		rotEC = rotateEdgeAndCurrent(a_edge, a_currentPoint);
 		r_edge = rotEC.edge;
 		r_currentPoint = rotEC.currentPoint;
 
 		rectangle = createRectangle(r_edge, (MOE_M / GPSADJUSTER));
-
+		
 		if (withinRectangle(rectangle, r_currentPoint)) {
 			position = counter;
 		}
-		counter = counter + 1;
+		else{
+			counter = counter + 1;
+		}
 	}
 	return position;
 }
+
+function selectRouteStart(currentRoute,checkMax){
+	counter = 0;
+	startOfRoute = [];
+	var updatedFormat = [];
+
+	while(counter < checkMax && counter < currentRoute.length){
+		edge = [currentRoute[counter].latitude,currentRoute[counter].longitude];
+		startOfRoute.push(edge);
+		counter = counter + 1;
+	}
+
+	if(startOfRoute.length > 1){
+		updatedFormat = convertToEdgeFormat(startOfRoute);
+	}
+
+	return updatedFormat;
+}
+
+function convertToEdgeFormat(startOfRoute){
+	counter = 0;
+	updatedFormat = [];
+	while(counter < startOfRoute.length-1){
+		if(counter!=startOfRoute.length-1){
+			var newEdge = [startOfRoute[counter],startOfRoute[counter+1]];
+			updatedFormat.push(newEdge);
+			counter = counter + 1;
+		}
+	}
+	return updatedFormat;
+}
+
+function routeIntegrity (currentDirection,currentPosition,currentRoute) {
+	//Margin of Error for Orientation
+	const MOE_Deg = 10.0;
+	const CHECKMAX = 5;
+	var updatedRoute = [];
+
+	var startOfRoute = selectRouteStart(currentRoute,CHECKMAX);
+
+	if (startOfRoute.length != 0) {
+		console.log(1);
+
+		const position = routeTools.findCurrentEdge(startOfRoute, currentPosition, CHECKMAX);
+
+		if (position != -1) {
+			console.log(2);
+			// Non adjusted GPS values used here
+			const edgeOrientation = routeTools.findEdgeOrientation(startOfRoute[position], (currentPosition.latitude, currentPosition.longitude));
+			if ((Math.abs(edgeOrientation - currentDirection)) < MOE_Deg) {
+				console.log(3);
+				var currentLength = currentRoute.length;
+				updatedRoute = currentRoute.splice(position);
+			} 
+		}
+	}
+	return updatedRoute;
+}
+
+const routeTools = {
+	adjustPoint,
+	rotateToXAxis,
+	withinRectangle,
+	adjustEdgeAndCurrent,
+	rotateEdgeAndCurrent,
+	createRectangle,
+	findEdgeOrientation,
+	findCurrentEdge,
+	routeIntegrity,
+	convertToEdgeFormat,
+	selectRouteStart
+};
+
+export default routeTools;
 

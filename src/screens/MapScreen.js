@@ -38,11 +38,6 @@ const COLORS = [
   '#7F0000',
 ];
 
-//Margin of Error for Orientation
-const MOE_Deg = 10.0;
-//Margin of Error for Metres
-const MOE_M = 10.0;
-
 export default class App extends Component {
 
   constructor(props){
@@ -62,7 +57,8 @@ export default class App extends Component {
         route:[],
         intervalID: null,
         logging: false,
-        logTag: "default"
+        logTag: "default",
+        routeCounter:0,
       }
   }
 
@@ -124,7 +120,33 @@ export default class App extends Component {
       speed: speed,
       direction: direction
     })
-    // routeIntegrity();
+
+    //On every 3 location updates, check route integrity
+    if(this.state.routeCounter%5==0){
+      this.validateRoute();
+      console.log("VALIDATING ROUTE");
+      this.state.routeCounter = 1;
+    }
+    this.state.routeCounter = this.state.routeCounter + 1;
+  }
+
+  validateRoute = () => {
+    
+    if(this.state.route.length>0){
+      var updatedRoute = routeTools.routeIntegrity(this.state.direction,[this.state.latitude,this.state.longitude],this.state.route);
+      
+      if(updatedRoute.length>0) {
+        console.log("updatedRoute.length>0");
+        //Update the route to the updated array
+        this.setState({
+          route:updatedRoute
+        })
+      }else {
+        console.log("getting a new route");
+        //get a new route
+        this.getRoute();
+      }
+    }
   }
 
   componentDidMount = async () => {
@@ -194,7 +216,7 @@ export default class App extends Component {
     // Update the markers
     let points = ws.getCyclists();
     console.log(points);
-    //this.addCyclists(points);
+    this.addCyclists(points);
 
     // Call the Hazard Detection after receiving the nearby points
     let warnings = this.callHazardDetection(points)
@@ -305,9 +327,9 @@ export default class App extends Component {
   }
 
   getRoute = async () => {
-    startPoint = {latitude:this.state.latitude,longitude:this.state.longitude}
-    var routeCoordinates = await routeRetriever(start=startPoint,end=this.state.mapText);
-    console.log(routeCoordinates);
+    var startPoint = {latitude:this.state.latitude,longitude:this.state.longitude}
+    var routeCoordinates = await routeRetriever(start=startPoint,end=this.state.mapText,currentOrientation=this.state.direction);
+    //console.log(routeCoordinates);
     
     if (routeCoordinates != undefined) {
       var coordinates = routeCoordinates.map((array) =>
