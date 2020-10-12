@@ -152,7 +152,7 @@ export default class App extends Component {
         RNFS.writeFile(path, 'GPS Log:\n', 'utf8')
           .then((success) => {
             console.log('FILE WRITTEN!');
-            console.log(RNFS.DocumentDirectoryPath + '/' + GPS_LOG_FILE);
+            console.log(RNFS.ExternalDirectoryPath + '/' + GPS_LOG_FILE);
           })
           .catch((err) => {
             console.log(err.message);
@@ -182,7 +182,7 @@ export default class App extends Component {
 
     // Check if logging
     if(this.state.logging) {
-      let path = RNFS.DocumentDirectoryPath + '/' + GPS_LOG_FILE;
+      let path = RNFS.ExternalDirectoryPath + '/' + GPS_LOG_FILE;
       RNFS.appendFile(path, `${this.state.logTag} => ${JSON.stringify(motorRequest)}\n`, 'utf8')
           .then((success) => {
           })
