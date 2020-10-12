@@ -10,7 +10,7 @@ import {
   TextInput,
   Image,
 } from 'react-native';
-import MapView, { Polyline, Marker } from 'react-native-maps';
+import MapView, { Polyline, Marker, Circle } from 'react-native-maps';
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import { locationService } from './LocationService';
@@ -21,10 +21,13 @@ const { Motorist } = require("../../node_modules/alert-system/src/motorist");
 const { Cyclist } = require("../../node_modules/alert-system/src/cyclist");
 const { CollisionDetector } = require("../../node_modules/alert-system/src/collisionDetector");
 
+import RNFS from "react-native-fs";
+
 // For sound functionality, basic usage example from: https://github.com/zmxv/react-native-sound was used.
 import Sound from 'react-native-sound';
 
 const LOCATION_TASK_NAME = "background-location-task";
+const GPS_LOG_FILE = "GPS_LOGS.txt";
 
 const COLORS = [
   '#7F0000',
@@ -53,6 +56,8 @@ export default class App extends Component {
         mapText:"",
         route:[],
         intervalID: null,
+        logging: false,
+        logTag: "default",
         routeCounter:0,
       }
   }
@@ -77,7 +82,37 @@ export default class App extends Component {
       cyclists: cyclists
     })
   }
-  
+
+  routeIntegrity = async () => {
+    if (this.state.route.length != 0) {
+      const currentRoute = this.state.route;
+      const position = await routeTools.findCurrentEdge(currentRoute);
+      if (position != -1) {
+        // Non adjusted GPS values to be used here
+        const edgeOrientation = routeTools.findEdgeOrientation(currentRoute[position], (this.state.latitude, this.state.longitude));
+        if ((Math.abs(edgeOrientation - this.state.direction)) < MOE_Deg) {
+          var currentLength = this.state.route.length;
+          currentRoute = await currentRoute.splice(position);
+          this.setState({
+            route: currentRoute
+          });
+        } else {
+          // Get a new route
+          this.setState({
+            route: []
+          });
+          getRoute();
+        }
+      } else {
+        // Get a new route
+        this.setState({
+            route: []
+        });
+        getRoute();
+      }
+    }
+  }
+
   onLocationUpdate = ({ latitude, longitude, speed, direction }) => {
     this.setState({
       latitude: latitude,
@@ -133,6 +168,18 @@ export default class App extends Component {
           intervalID: id
         });
       }
+
+      let path = RNFS.DocumentDirectoryPath + '/' + GPS_LOG_FILE;
+      if(!RNFS.exists(path)) {
+        RNFS.writeFile(path, 'GPS Log:\n', 'utf8')
+          .then((success) => {
+            console.log('FILE WRITTEN!');
+            console.log(RNFS.ExternalDirectoryPath + '/' + GPS_LOG_FILE);
+          })
+          .catch((err) => {
+            console.log(err.message);
+          });
+      }
   }
 
   componentWillUnmount = async () => {
@@ -142,7 +189,7 @@ export default class App extends Component {
 
   // This is called when the users location changes
   usersLocationChange = (coords) => {
-    // TEST QUERY
+
     let motorRequest = {
       'type': 'motorist',
       'userID': 'some_id',
@@ -154,6 +201,17 @@ export default class App extends Component {
     // Need to query for cyclists
     console.log(`Sending: ${JSON.stringify(motorRequest)}`);
     ws.send(motorRequest);
+
+    // Check if logging
+    if(this.state.logging) {
+      let path = RNFS.ExternalDirectoryPath + '/' + GPS_LOG_FILE;
+      RNFS.appendFile(path, `${this.state.logTag} => ${JSON.stringify(motorRequest)}\n`, 'utf8')
+          .then((success) => {
+          })
+          .catch((err) => {
+            console.log(err.message);
+          });
+    }
 
     // Update the markers
     let points = ws.getCyclists();
@@ -223,6 +281,51 @@ export default class App extends Component {
     })
   }
 
+  /**
+   * @returns JSX object that represents drawing the Motorist Marker on the Map
+   */
+  drawMotorist = () => {
+    // Variables
+    const motoristRadius = 6;
+    const drawRadius = true;
+    const showSpeed = true;
+
+    return (
+      <View>
+        <Marker
+          coordinate={{
+            latitude: this.state.latitude,
+            longitude: this.state.longitude}}
+          anchor={{
+            x: 0.5,
+            y: 0.5
+          }}
+          title={`${this.state.speed.toFixed(2)} m/s`}
+        >
+        <Image
+          source={require('../../assets/Arrow.png')}
+          style={{
+            width: 28,
+            height: 28,
+            transform: [{
+              rotate: `${this.state.direction}deg`
+            }]}}
+          resizeMode="contain"
+        />
+      </Marker>
+      {
+        // Conditionally Draw the circle based on flag
+        drawRadius &&
+        <Circle 
+          center={{
+            latitude: this.state.latitude,
+            longitude: this.state.longitude}}
+          radius={motoristRadius}
+        />
+      }
+      </View>);
+  }
+
   getRoute = async () => {
     var startPoint = {latitude:this.state.latitude,longitude:this.state.longitude}
     var routeCoordinates = await routeRetriever(start=startPoint,end=this.state.mapText,currentOrientation=this.state.direction);
@@ -250,11 +353,11 @@ export default class App extends Component {
 
               region={{latitude:this.state.latitude,longitude:this.state.longitude,latitudeDelta:this.state.latitudeDelta,longitudeDelta:this.state.longitudeDelta}}
               onRegionChange={this.onRegionChange}
-              showsUserLocation={true}
-              minZoomLevel={18}
+              minZoomLevel={19}
             >
 
               {
+                // Draw the Cyclists
                 this.state.cyclists.map(marker =>(
                   <Marker
                     key={marker.key}
@@ -270,6 +373,11 @@ export default class App extends Component {
                   </Marker>))
               }
 
+              {
+                // Draw the Motorist
+                this.drawMotorist()
+              }
+
               <Polyline
                 coordinates={this.state.route}
                 strokeColor="#000"
@@ -279,7 +387,29 @@ export default class App extends Component {
 
 
             </MapView>
-
+            <View
+              style={styles.loggingStyle}>
+                {
+                  this.state.logging &&
+                  <Button title="Log"
+                    color="#FF0000"
+                    onPress={() => {this.setState({
+                      logging: false
+                    })}}/>
+                }
+                {
+                  !this.state.logging &&
+                  <Button title="Log"
+                    color="#F4860B"
+                    onPress={() => {this.setState({
+                      logging: true
+                    })}}/>
+                }
+                <TextInput style={styles.textInput} onSubmitEditing={(event) => {
+                  this.state.logTag = event.nativeEvent.text;
+                }}
+                placeholder={"Enter TAG"}/>
+            </View>
           </View>
 
           <View style={styles.subContainer}>
@@ -349,6 +479,11 @@ const styles = StyleSheet.create({
     height: 40,
     borderColor: 'gray',
     borderWidth: 1,
+  },
+  loggingStyle:{
+    position: "absolute",
+    top: "0%",
+    flexDirection: "row"
   }
 })
 
