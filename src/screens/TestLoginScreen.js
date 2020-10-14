@@ -2,6 +2,8 @@ import React, { useContext } from "react";
 import { StyleSheet, View, Image, Button } from "react-native";
 import { SocialIcon } from "react-native-elements";
 import ws from "../utils/ReusableWebSocket";
+import AuthenticationContext from "../contexts/AuthenticationContext";
+import GoogleSignInButton from "../components/GoogleLoginButton";
 
 const TEST_AUTHENTICATION = "testMotor";
 
@@ -11,6 +13,7 @@ const TEST_AUTHENTICATION = "testMotor";
  * @component
  */
 export default function LoginScreen({navigation}) {
+  const authContext = useContext(AuthenticationContext);
 
   return (
     <View style={styles.container}>
@@ -27,6 +30,11 @@ export default function LoginScreen({navigation}) {
 
             navigation.navigate("MapScreen")
           }}
+        />
+        <GoogleSignInButton
+          title="Sign In With Google"
+          style={styles.google}
+          login={authContext.actions.login}
         />
         <SocialIcon
           button

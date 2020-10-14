@@ -17,6 +17,7 @@ import { locationService } from './LocationService';
 import  routeRetriever  from '../utils/RouteRetriever';
 import routeTools from "../utils/RouteTools";
 import ws from '../utils/ReusableWebSocket';
+import {calcHeading} from '../utils/formulas';
 const { Motorist } = require("../../node_modules/alert-system/src/motorist");
 const { Cyclist } = require("../../node_modules/alert-system/src/cyclist");
 const { CollisionDetector } = require("../../node_modules/alert-system/src/collisionDetector");
@@ -28,6 +29,7 @@ import Sound from 'react-native-sound';
 
 const LOCATION_TASK_NAME = "background-location-task";
 const GPS_LOG_FILE = "GPS_LOGS.txt";
+let watchPos = null;
 
 const COLORS = [
   '#7F0000',
@@ -128,6 +130,7 @@ export default class App extends Component {
       this.state.routeCounter = 1;
     }
     this.state.routeCounter = this.state.routeCounter + 1;
+    this.usersLocationChange();
   }
 
   validateRoute = () => {
@@ -157,16 +160,47 @@ export default class App extends Component {
 
         await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
           accuracy: Location.Accuracy.BestForNavigation,
-          distanceInterval: 1,
+          distanceInterval: 0,
+          foregroundService: {
+            notificationTitle: "Location Tracking",
+            notificationBody: "Expektus is tracking your location."
+          }
         });
 
-        const id = setInterval(() => {
-          this.usersLocationChange();
-        }, 1000);
+        // No need interval just chuck users location change in onLocationUpdate
+        // const id = setInterval(() => {
+        //   this.usersLocationChange();
+        // }, 1000);
 
-        this.setState({
-          intervalID: id
-        });
+        // this.setState({
+        //   intervalID: id
+        // });
+
+        // This also makes sure that gps can work in foreground for older androids (lollipop)
+        // watchPos = await Location.watchPositionAsync(
+        //     {
+        //       accuracy: Location.Accuracy.BestForNavigation,
+        //       timeInterval: 1200,
+        //       distanceInterval: 1,
+        //     },
+        //     async (location) => {
+        //         let coords = location.coords;
+        //         // This function gets more consistent direction heading
+        //         let head = await Location.getHeadingAsync();
+        //         const cycData = {
+        //           type: "motorist",
+        //           longitude: coords.longitude,
+        //           latitude: coords.latitude,
+        //           direction: head.magHeading,
+        //           speed: coords.speed,
+        //           task: "watcher"
+        //         };
+
+        //         locationService.setLocation(cycData);
+        //         this.usersLocationChange();
+        //     },
+        //     error => console.log(error)
+        // );
       }
 
       let path = RNFS.DocumentDirectoryPath + '/' + GPS_LOG_FILE;
@@ -184,7 +218,10 @@ export default class App extends Component {
 
   componentWillUnmount = async () => {
     locationService.unsubscribe(this.onLocationUpdate);
-    clearInterval(this.state.intervalID);
+    //clearInterval(this.state.intervalID);
+    await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    watchPos?.remove();
+    ws?.close();
   }
 
   // This is called when the users location changes
@@ -428,16 +465,25 @@ export default class App extends Component {
 }
 
 // Example code used:https://docs.expo.io/versions/latest/sdk/task-manager/#taskmanagerdefinetasktaskname-task
-TaskManager.defineTask(LOCATION_TASK_NAME, ({ data, error }) => {
+TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   const timeStamp = new Date();
   if (error) {
     console.log("error")
     return
   }
   if (data.locations.length >= 1) {
-    const { latitude, longitude } = data.locations[0].coords
+    let res = await Location.getHeadingAsync();
+    let heading = res.magHeading;
+
+    // if(data.locations.length > 1){
+    //   let loc = data.locations;
+    //   heading = calcHeading(loc[1].latitude, loc[1].longitude, loc[0].latitude, loc[0].longitude);
+    // }
+
+    const { latitude, longitude } = data.locations[0].coords;
     const speed = data.locations[0].coords.speed;
-    const direction = data.locations[0].coords.heading;
+    // const direction = data.locations[0].coords.heading;
+    const direction = heading;
 
     locationService.setLocation({latitude, longitude, speed, direction});
 
