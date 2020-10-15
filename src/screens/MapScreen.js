@@ -135,7 +135,7 @@ export default class App extends Component {
       this.state.routeCounter = 1;
     }
     this.state.routeCounter = this.state.routeCounter + 1;
-    this.usersLocationChange();
+    this.usersLocationChange(); // Moved from interval thing
   }
 
   validateRoute = () => {
@@ -159,15 +159,9 @@ export default class App extends Component {
 
   componentDidMount = async () => {
     const { status } = await Location.requestPermissionsAsync();
-    let hasStarted = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
       if (status === 'granted') {
 
         locationService.subscribe(this.onLocationUpdate);
-
-        console.log(`Background task started? ${hasStarted}`)
-        // if (hasStarted) {
-        //   await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-        // }
 
         await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
           accuracy: Location.Accuracy.BestForNavigation,
@@ -187,7 +181,9 @@ export default class App extends Component {
         //   intervalID: id
         // });
 
-        // This also makes sure that gps can work in foreground for older androids (lollipop)
+        // This makes sure that gps doesn't only rely on background task
+        // (React native background tasks don't seem to work older androids (lollipop))
+        // Will uncomment this later.
         // watchPos = await Location.watchPositionAsync(
         //     {
         //       accuracy: Location.Accuracy.BestForNavigation,
@@ -230,6 +226,7 @@ export default class App extends Component {
   componentWillUnmount = async () => {
     locationService.unsubscribe(this.onLocationUpdate);
     //clearInterval(this.state.intervalID);
+    // Clean up background tasks
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
     // await TaskManager.unregisterTaskAsync(LOCATION_TASK_NAME)
     await TaskManager.unregisterAllTasksAsync();
@@ -392,11 +389,6 @@ export default class App extends Component {
     }
   }
 
-  logout = async () => {
-    const auth = useContext(AuthenticationContext);
-    auth.actions.logout(auth.state.platform);
-  }
-
   render(){
     return (
    <View style={styles.container}>
@@ -512,8 +504,9 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     let res;
     let heading
     // console.log(data.locations.length)
+    // Send the data.location heading first to load map & reduce unnecessary wait then call await req
     if(hasFirstPosSet) {
-      res = await Location.getHeadingAsync();
+      res = await Location.getHeadingAsync(); // This gives more stable direction readings
       heading = res.magHeading;
     }
     else {
@@ -528,10 +521,13 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     locationService.setLocation({latitude, longitude, speed, direction});
 
     console.log(`Location Recorded: [${timeStamp}]:\n[${latitude}, ${longitude}, ${direction}, ${speed}]`);
-    hasFirstPosSet = true;
+    hasFirstPosSet = true;// Send and plug first pos then can do await getHeadingAsync
   }
 });
 
+/**
+ * Logout button which helps redirect to login screen
+ */
 function Logout() {
   const auth = useContext(AuthenticationContext);
   
