@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, useContext } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import {
@@ -8,6 +8,7 @@ import {
   Text,
   Button,
   TextInput,
+  TouchableOpacity,
   Image,
 } from 'react-native';
 import MapView, { Polyline, Marker, Circle } from 'react-native-maps';
@@ -17,10 +18,10 @@ import { locationService } from './LocationService';
 import  routeRetriever  from '../utils/RouteRetriever';
 import routeTools from "../utils/RouteTools";
 import ws from '../utils/ReusableWebSocket';
-import {calcHeading} from '../utils/formulas';
 const { Motorist } = require("../../node_modules/alert-system/src/motorist");
 const { Cyclist } = require("../../node_modules/alert-system/src/cyclist");
 const { CollisionDetector } = require("../../node_modules/alert-system/src/collisionDetector");
+import AuthenticationContext from "../contexts/AuthenticationContext";
 
 import RNFS from "react-native-fs";
 
@@ -44,7 +45,6 @@ const COLORS = [
 ];
 
 export default class App extends Component {
-
   constructor(props){
       super(props);
       Sound.setCategory('Playback',true);
@@ -54,13 +54,15 @@ export default class App extends Component {
         longitude:0,
         direction:0,
         speed:0,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
+        latitudeDelta: 0.000012,
+        longitudeDelta: 0.00121,
+        // latitudeDelta: 0.0922,
+        // longitudeDelta: 0.0421,
         cyclists:[],
         hazards:[],
         mapText:"",
         route:[],
-        intervalID: null,
+        // intervalID: null, // No need just chuck just chuck usersLocationChange in onLocationUpdate
         logging: false,
         logTag: "default",
         routeCounter:0,
@@ -176,7 +178,7 @@ export default class App extends Component {
           }
         });
 
-        // **No need interval just chuck usersLocationChange in onLocationUpdate
+        // ** No need interval just chuck usersLocationChange in onLocationUpdate **
         // const id = setInterval(() => {
         //   this.usersLocationChange();
         // }, 1000);
@@ -230,10 +232,11 @@ export default class App extends Component {
     //clearInterval(this.state.intervalID);
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
     // await TaskManager.unregisterTaskAsync(LOCATION_TASK_NAME)
-    // await TaskManager.unregisterAllTasksAsync();
+    await TaskManager.unregisterAllTasksAsync();
     watchPos?.remove();
     ws?.close();
-    console.log("Unmounting")
+    console.log("+++++++ Unmounted Map Screen! Array below should show no tasks. +++++++++")
+    console.log(await TaskManager.getRegisteredTasksAsync())
   }
 
   // This is called when the users location changes
@@ -389,6 +392,11 @@ export default class App extends Component {
     }
   }
 
+  logout = async () => {
+    const auth = useContext(AuthenticationContext);
+    auth.actions.logout(auth.state.platform);
+  }
+
   render(){
     return (
    <View style={styles.container}>
@@ -402,10 +410,23 @@ export default class App extends Component {
 
               region={{latitude:this.state.latitude,longitude:this.state.longitude,latitudeDelta:this.state.latitudeDelta,longitudeDelta:this.state.longitudeDelta}}
               onRegionChange={this.onRegionChange}
-              minZoomLevel={19}
-              maxZoomLevel={20}
-              enableZoomControl={true}
-              zoomControlEnabled={true}
+
+              // zoom out
+              // lat deltas can handle zoom levels
+              onDoublePress={() => {
+                this.setState({
+                  latitudeDelta: 0.00512,
+                  // longitudeDelta: this.state.longitudeDelta - LONGITUDE_DELTA
+                })
+              }}
+
+              // zoom in
+              onLongPress={() => {
+                this.setState({
+                  latitudeDelta: 0.000012,
+                  // longitudeDelta: this.state.longitudeDelta - LONGITUDE_DELTA
+                })
+              }}
             >
 
               {
@@ -469,16 +490,17 @@ export default class App extends Component {
               return this.playSound(this);
             }}/>
             <TextInput style={styles.textInput} onChangeText={this.handleRoute}/>
-            <Button title="Enter Destingation" onPress={() => {
+            <Button title="Enter Destination" onPress={() => {
               return this.getRoute();
             }}/>
           </View>
-
+          <Logout title="Logout"/>
       </View>
       )
   }
 }
 
+let hasFirstPosSet = false;
 // Example code used:https://docs.expo.io/versions/latest/sdk/task-manager/#taskmanagerdefinetasktaskname-task
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   const timeStamp = new Date();
@@ -487,13 +509,16 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     return
   }
   if (data.locations.length >= 1) {
-    let res = await Location.getHeadingAsync();
-    let heading = res.magHeading;
-
-    // if(data.locations.length > 1){
-    //   let loc = data.locations;
-    //   heading = calcHeading(loc[1].latitude, loc[1].longitude, loc[0].latitude, loc[0].longitude);
-    // }
+    let res;
+    let heading
+    // console.log(data.locations.length)
+    if(hasFirstPosSet) {
+      res = await Location.getHeadingAsync();
+      heading = res.magHeading;
+    }
+    else {
+      heading = data.locations[0].coords.heading;
+    }
 
     const { latitude, longitude } = data.locations[0].coords;
     const speed = data.locations[0].coords.speed;
@@ -503,8 +528,28 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     locationService.setLocation({latitude, longitude, speed, direction});
 
     console.log(`Location Recorded: [${timeStamp}]:\n[${latitude}, ${longitude}, ${direction}, ${speed}]`);
+    hasFirstPosSet = true;
   }
 });
+
+function Logout() {
+  const auth = useContext(AuthenticationContext);
+  
+  return (
+    <TouchableOpacity style={[{ width: "35%", borderRadius: 10, backgroundColor: "#3b5998", paddingVertical: 3, }]} onPress={() => {
+      auth.actions.logout(auth.state.platform);
+    }}>
+      <Text style={[{
+        fontSize: 18,
+        color: "#fff",
+        fontWeight: "bold",
+        alignSelf: "center",
+        textTransform: "uppercase"
+      }]}>Logout</Text>
+
+    </TouchableOpacity>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {

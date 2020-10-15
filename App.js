@@ -13,6 +13,7 @@ import LoginScreen from "./src/screens/TestLoginScreen";
 //import LoginScreen from "./src/screens/LoginScreen";
 import MapScreen from "./src/screens/MapScreen";
 //import AuthenticationContext from "./src/contexts/AuthenticationContext";
+import * as GoogleSignIn from "expo-google-sign-in";
 import AuthenticationContext from "./src/contexts/AuthenticationContext";
 import ws from "./src/utils/ReusableWebSocket";
 import Constant from "./src/utils/Constant";
@@ -92,10 +93,10 @@ export default function App() {
   return (
     <AuthenticationContext.Provider value={{ actions, state }}>
       <NavigationContainer>
-      <Stack.Navigator>     
+      <Stack.Navigator screenOptions={{ headerShown: false }}>    
           { state.user === null ?
-            // <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="LoginScreen" component={LoginScreen}/>
+            <Stack.Screen name="Login" component={LoginScreen} />
+            // <Stack.Screen name="LoginScreen" component={LoginScreen}/>
             :
             <Stack.Screen name="MapScreen" component={MapScreen} />
           }
