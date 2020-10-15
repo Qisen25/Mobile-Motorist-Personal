@@ -16,4 +16,4 @@ The aim of this application is to help provide users (specifically motorists) by
 
 1. Fixed the heading (direction) inconsistency and jumps, seems to be stable now.
 2. Added the google sign in stuff from cyc app, to allow more ppl to test (Clash of telemetry will occur if > 1 ppl use testMotor)
-3. Can do limited/fixed zoom in/out now, `double tap screen to zoom out` and `long press to zoom in`
+3. Can do limited/fixed zoom in/out now, `double tap screen to zoom out` and `long press to zoom in`. Might be helpful when observing/testing routing functionality.
