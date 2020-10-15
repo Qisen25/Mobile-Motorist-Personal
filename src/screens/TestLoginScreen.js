@@ -4,6 +4,7 @@ import { SocialIcon } from "react-native-elements";
 import ws from "../utils/ReusableWebSocket";
 import AuthenticationContext from "../contexts/AuthenticationContext";
 import GoogleSignInButton from "../components/GoogleLoginButton";
+import { State } from "react-native-gesture-handler";
 
 const TEST_AUTHENTICATION = "testMotor";
 
@@ -23,12 +24,14 @@ export default function LoginScreen({navigation}) {
       <View style={styles.buttonsContainer}>
         <Button
           title="TEST SIGN IN"
-          onPress={() => {
+          login={authContext.actions.login}
+          onPress={({login}) => {
             // Start the Web Socket Connection
-            ws.setHeaders({ headers: { authorisation: TEST_AUTHENTICATION } });
-            ws.connect();
+            // ws.setHeaders({ headers: { authorisation: TEST_AUTHENTICATION } });
+            // ws.connect();
 
-            navigation.navigate("MapScreen")
+            //navigation.navigate("MapScreen")
+            authContext.actions.login("Test", TEST_AUTHENTICATION );
           }}
         />
         <GoogleSignInButton

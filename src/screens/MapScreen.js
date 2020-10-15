@@ -29,6 +29,9 @@ import Sound from 'react-native-sound';
 
 const LOCATION_TASK_NAME = "background-location-task";
 const GPS_LOG_FILE = "GPS_LOGS.txt";
+const LATITUDE_DELTA = 0.01;
+const LONGITUDE_DELTA = 0.01;
+
 let watchPos = null;
 
 const COLORS = [
@@ -154,9 +157,15 @@ export default class App extends Component {
 
   componentDidMount = async () => {
     const { status } = await Location.requestPermissionsAsync();
+    let hasStarted = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
       if (status === 'granted') {
 
-        locationService.subscribe(this.onLocationUpdate)
+        locationService.subscribe(this.onLocationUpdate);
+
+        console.log(`Background task started? ${hasStarted}`)
+        // if (hasStarted) {
+        //   await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+        // }
 
         await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
           accuracy: Location.Accuracy.BestForNavigation,
@@ -167,7 +176,7 @@ export default class App extends Component {
           }
         });
 
-        // No need interval just chuck users location change in onLocationUpdate
+        // **No need interval just chuck usersLocationChange in onLocationUpdate
         // const id = setInterval(() => {
         //   this.usersLocationChange();
         // }, 1000);
@@ -220,8 +229,11 @@ export default class App extends Component {
     locationService.unsubscribe(this.onLocationUpdate);
     //clearInterval(this.state.intervalID);
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    // await TaskManager.unregisterTaskAsync(LOCATION_TASK_NAME)
+    // await TaskManager.unregisterAllTasksAsync();
     watchPos?.remove();
     ws?.close();
+    console.log("Unmounting")
   }
 
   // This is called when the users location changes
@@ -391,6 +403,9 @@ export default class App extends Component {
               region={{latitude:this.state.latitude,longitude:this.state.longitude,latitudeDelta:this.state.latitudeDelta,longitudeDelta:this.state.longitudeDelta}}
               onRegionChange={this.onRegionChange}
               minZoomLevel={19}
+              maxZoomLevel={20}
+              enableZoomControl={true}
+              zoomControlEnabled={true}
             >
 
               {
