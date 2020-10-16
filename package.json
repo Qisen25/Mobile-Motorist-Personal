@@ -1,11 +1,13 @@
 {
+  "name": "mobile-motorist",
   "main": "index.js",
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "web": "expo start --web",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "postinstall": "cp -R node_modules_patches/expo-loc-8.3.0/expo-location/ node_modules/"
   },
   "dependencies": {
     "@react-native-community/masked-view": "0.1.10",

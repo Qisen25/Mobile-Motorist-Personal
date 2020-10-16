@@ -22,6 +22,7 @@ const { Motorist } = require("../../node_modules/alert-system/src/motorist");
 const { Cyclist } = require("../../node_modules/alert-system/src/cyclist");
 const { CollisionDetector } = require("../../node_modules/alert-system/src/collisionDetector");
 import AuthenticationContext from "../contexts/AuthenticationContext";
+import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
 
 import RNFS from "react-native-fs";
 
@@ -163,6 +164,28 @@ export default class App extends Component {
 
         locationService.subscribe(this.onLocationUpdate);
 
+        // Try get the first pos to render map faster
+        let lastPos = {}; 
+        try {
+          lastPos = await Location.getLastKnownPositionAsync();
+        } catch(error) {
+          // Last location may not be found since gps never turned on previously or phone restarted/shutdown
+          // Try search for current location quickly on mount         
+          if (error.message.includes("Last known location not found")) {
+              console.log("Last known location not found");
+              lastPos = await Location.getCurrentPositionAsync({accuracy: Location.Accuracy.BestForNavigation});
+          }
+        }
+
+        const coords = lastPos.coords;
+
+        locationService.setLocation({
+          latitude: coords.latitude, 
+          longitude: coords.longitude, 
+          speed: coords.speed, 
+          direction: coords.heading
+        });
+
         await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
           accuracy: Location.Accuracy.BestForNavigation,
           distanceInterval: 0,
@@ -172,6 +195,9 @@ export default class App extends Component {
           }
         });
 
+        // Keep screen awake during Nav
+        activateKeepAwake();
+    
         // ** No need interval just chuck usersLocationChange in onLocationUpdate **
         // const id = setInterval(() => {
         //   this.usersLocationChange();
@@ -227,10 +253,11 @@ export default class App extends Component {
     locationService.unsubscribe(this.onLocationUpdate);
     //clearInterval(this.state.intervalID);
     // Clean up background tasks
+    deactivateKeepAwake();
+    await watchPos?.remove();
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
     // await TaskManager.unregisterTaskAsync(LOCATION_TASK_NAME)
     await TaskManager.unregisterAllTasksAsync();
-    watchPos?.remove();
     ws?.close();
     console.log("+++++++ Unmounted Map Screen! Array below should show no tasks. +++++++++")
     console.log(await TaskManager.getRegisteredTasksAsync())
