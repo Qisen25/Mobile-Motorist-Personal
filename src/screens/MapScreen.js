@@ -23,6 +23,7 @@ const { Cyclist } = require("../../node_modules/alert-system/src/cyclist");
 const { CollisionDetector } = require("../../node_modules/alert-system/src/collisionDetector");
 import AuthenticationContext from "../contexts/AuthenticationContext";
 import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
+import KeepAwake from 'react-native-keep-awake';
 
 import RNFS from "react-native-fs";
 
@@ -69,6 +70,8 @@ export default class App extends Component {
         routeCounter:0,
       }
   }
+
+  _isMounted = false;
 
   playSound(component){
     const callback = (error, sound) =>{
@@ -160,107 +163,129 @@ export default class App extends Component {
 
   componentDidMount = async () => {
     const { status } = await Location.requestPermissionsAsync();
-      if (status === 'granted') {
+    console.log(`Map Screen mounted? ${this._isMounted}`);
+    if (status === 'granted') {
 
-        locationService.subscribe(this.onLocationUpdate);
+      locationService.subscribe(this.onLocationUpdate);
 
-        // Try get the first pos to render map faster
-        let lastPos = {}; 
-        try {
-          lastPos = await Location.getLastKnownPositionAsync();
-        } catch(error) {
-          // Last location may not be found since gps never turned on previously or phone restarted/shutdown
-          // Try search for current location quickly on mount         
-          if (error.message.includes("Last known location not found")) {
-              console.log("Last known location not found");
-              lastPos = await Location.getCurrentPositionAsync({accuracy: Location.Accuracy.BestForNavigation});
-          }
+      console.log("GPS mounted");
+
+      // Try get the first pos to render map faster
+      let lastPos = {}; 
+      try {
+        lastPos = await Location.getLastKnownPositionAsync();
+      } catch(error) {
+        // Last location may not be found since gps never turned on previously or phone restarted/shutdown
+        // Try search for current location quickly on mount         
+        if (error.message.includes("Last known location not found")) {
+            console.log("Last known location not found");
+            lastPos = await Location.getCurrentPositionAsync({accuracy: Location.Accuracy.BestForNavigation});
         }
-
-        const coords = lastPos.coords;
-
-        locationService.setLocation({
-          latitude: coords.latitude, 
-          longitude: coords.longitude, 
-          speed: coords.speed, 
-          direction: coords.heading
-        });
-
-        await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-          accuracy: Location.Accuracy.BestForNavigation,
-          distanceInterval: 0,
-          foregroundService: {
-            notificationTitle: "Location Tracking",
-            notificationBody: "Expektus is tracking your location."
-          }
-        });
-
-        // Keep screen awake during Nav
-        activateKeepAwake();
-    
-        // ** No need interval just chuck usersLocationChange in onLocationUpdate **
-        // const id = setInterval(() => {
-        //   this.usersLocationChange();
-        // }, 1000);
-
-        // this.setState({
-        //   intervalID: id
-        // });
-
-        // This makes sure that gps doesn't only rely on background task
-        // (React native background tasks don't seem to work older androids (lollipop))
-        // Will uncomment this later.
-        // watchPos = await Location.watchPositionAsync(
-        //     {
-        //       accuracy: Location.Accuracy.BestForNavigation,
-        //       timeInterval: 1200,
-        //       distanceInterval: 1,
-        //     },
-        //     async (location) => {
-        //         let coords = location.coords;
-        //         // This function gets more consistent direction heading
-        //         let head = await Location.getHeadingAsync();
-        //         const cycData = {
-        //           type: "motorist",
-        //           longitude: coords.longitude,
-        //           latitude: coords.latitude,
-        //           direction: head.magHeading,
-        //           speed: coords.speed,
-        //           task: "watcher"
-        //         };
-
-        //         locationService.setLocation(cycData);
-        //         this.usersLocationChange();
-        //     },
-        //     error => console.log(error)
-        // );
       }
 
-      let path = RNFS.DocumentDirectoryPath + '/' + GPS_LOG_FILE;
-      if(!RNFS.exists(path)) {
-        RNFS.writeFile(path, 'GPS Log:\n', 'utf8')
-          .then((success) => {
-            console.log('FILE WRITTEN!');
-            console.log(RNFS.ExternalDirectoryPath + '/' + GPS_LOG_FILE);
-          })
-          .catch((err) => {
-            console.log(err.message);
-          });
-      }
+      const coords = lastPos.coords;
+
+      locationService.setLocation({
+        latitude: coords.latitude, 
+        longitude: coords.longitude, 
+        speed: coords.speed, 
+        direction: coords.heading
+      });
+
+      await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+        accuracy: Location.Accuracy.BestForNavigation,
+        distanceInterval: 0,
+        foregroundService: {
+          notificationTitle: "Location Tracking",
+          notificationBody: "Expektus is tracking your location."
+        }
+      });
+
+      console.log("+++++++ Map Screen component mounted +++++++");
+      // Keep screen awake during Nav
+      // try {
+      //   activateKeepAwake();
+      // } catch(error) {
+      //   console.log(error);
+      // }
+      KeepAwake.activate();
+  
+      // ** No need interval just chuck usersLocationChange in onLocationUpdate **
+      // const id = setInterval(() => {
+      //   this.usersLocationChange();
+      // }, 1000);
+
+      // this.setState({
+      //   intervalID: id
+      // });
+
+      // This makes sure that gps doesn't only rely on background task
+      // (React native background tasks don't seem to work older androids (lollipop))
+      // Will uncomment this later.
+      // watchPos = await Location.watchPositionAsync(
+      //     {
+      //       accuracy: Location.Accuracy.BestForNavigation,
+      //       timeInterval: 1200,
+      //       distanceInterval: 1,
+      //     },
+      //     async (location) => {
+      //         let coords = location.coords;
+      //         // This function gets more consistent direction heading
+      //         let head = await Location.getHeadingAsync();
+      //         const cycData = {
+      //           type: "motorist",
+      //           longitude: coords.longitude,
+      //           latitude: coords.latitude,
+      //           direction: head.magHeading,
+      //           speed: coords.speed,
+      //           task: "watcher"
+      //         };
+
+      //         locationService.setLocation(cycData);
+      //         this.usersLocationChange();
+      //     },
+      //     error => console.log(error)
+      // );
+    }
+
+    let path = RNFS.DocumentDirectoryPath + '/' + GPS_LOG_FILE;
+    if(!RNFS.exists(path)) {
+      RNFS.writeFile(path, 'GPS Log:\n', 'utf8')
+        .then((success) => {
+          console.log('FILE WRITTEN!');
+          console.log(RNFS.ExternalDirectoryPath + '/' + GPS_LOG_FILE);
+        })
+        .catch((err) => {
+          console.log(err.message);
+        });
+    }
+
+      this._isMounted = true;
   }
 
   componentWillUnmount = async () => {
-    locationService.unsubscribe(this.onLocationUpdate);
+    
     //clearInterval(this.state.intervalID);
+    console.log(`Map Screen mounted? ${this._isMounted}`);
+    if (this._isMounted) {
+      console.log("Removing keep awake and close socket");
+      try {
+        KeepAwake.deactivate();
+      } catch(error) {
+        console.log(error);
+      }
+      ws?.close();
+    }
     // Clean up background tasks
-    deactivateKeepAwake();
     await watchPos?.remove();
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
     // await TaskManager.unregisterTaskAsync(LOCATION_TASK_NAME)
     await TaskManager.unregisterAllTasksAsync();
-    ws?.close();
     console.log("+++++++ Unmounted Map Screen! Array below should show no tasks. +++++++++")
-    console.log(await TaskManager.getRegisteredTasksAsync())
+    console.log(await TaskManager.getRegisteredTasksAsync());
+
+    locationService.unsubscribe(this.onLocationUpdate);
+    this._isMounted = false;
   }
 
   // This is called when the users location changes
@@ -276,44 +301,48 @@ export default class App extends Component {
     };
     // Need to query for cyclists
     console.log(`Sending: ${JSON.stringify(motorRequest)}`);
-    ws.send(motorRequest);
+    try {
+      ws.send(motorRequest);
 
-    // Check if logging
-    if(this.state.logging) {
-      let path = RNFS.ExternalDirectoryPath + '/' + GPS_LOG_FILE;
-      RNFS.appendFile(path, `${this.state.logTag} => ${JSON.stringify(motorRequest)}\n`, 'utf8')
-          .then((success) => {
-          })
-          .catch((err) => {
-            console.log(err.message);
-          });
-    }
-
-    // Update the markers
-    let points = ws.getCyclists();
-    console.log(points);
-    this.addCyclists(points);
-
-    // Call the Hazard Detection after receiving the nearby points
-    let warnings = this.callHazardDetection(points)
-
-    console.log(`Hazards: ${warnings}`);
-    /*
-    if(warnings === undefined) {
-      warnings = [];
-    }*/
-
-    // Update the state
-    this.setState({
-      cyclists: points,
-      hazards: warnings
-    })
-
-    // Play the Hazard sound if a hazard has been detected
-    if(warnings !==null && warnings !== undefined) {
-      if(warnings.length > 0) {
-        this.playSound(this);
+      // Check if logging
+      if(this.state.logging) {
+        let path = RNFS.ExternalDirectoryPath + '/' + GPS_LOG_FILE;
+        RNFS.appendFile(path, `${this.state.logTag} => ${JSON.stringify(motorRequest)}\n`, 'utf8')
+            .then((success) => {
+            })
+            .catch((err) => {
+              console.log(err.message);
+            });
       }
+
+      // Update the markers
+      let points = ws.getCyclists();
+      console.log(points);
+      this.addCyclists(points);
+
+      // Call the Hazard Detection after receiving the nearby points
+      let warnings = this.callHazardDetection(points)
+
+      console.log(`Hazards: ${warnings}`);
+      /*
+      if(warnings === undefined) {
+        warnings = [];
+      }*/
+
+      // Update the state
+      this.setState({
+        cyclists: points,
+        hazards: warnings
+      })
+
+      // Play the Hazard sound if a hazard has been detected
+      if(warnings !==null && warnings !== undefined) {
+        if(warnings.length > 0) {
+          this.playSound(this);
+        }
+      }
+    } catch(error) {
+      console.log(error);
     }
   }
 
@@ -529,7 +558,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   }
   if (data.locations.length >= 1) {
     let res;
-    let heading
+    let heading;
     // console.log(data.locations.length)
     // Send the data.location heading first to load map & reduce unnecessary wait then call await req
     if(hasFirstPosSet) {
