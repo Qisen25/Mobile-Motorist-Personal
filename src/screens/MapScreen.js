@@ -71,6 +71,7 @@ export default class App extends Component {
         logging: false,
         logTag: "default",
         routeCounter:0,
+        fetchingCycs: null
       }
   }
 
@@ -179,15 +180,15 @@ export default class App extends Component {
           if(!this.locationActive) {
             this.initLocation();
           }
-          // clearInterval(checkPerms);
+          clearInterval(checkPerms);
         } else {
           if (this.locationActive) {
             this.stopLocation();
           }
-          // Show user dialog to please give location permisions
+          // Show user our custom dialog to please give location permisions
           this.gpsPermModalProp.current.GpsPermissionPopup();
         }
-      }, 4000);
+      }, 6000);
     }
 
     let path = RNFS.DocumentDirectoryPath + '/' + GPS_LOG_FILE;
@@ -235,7 +236,8 @@ export default class App extends Component {
 
     await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
       accuracy: Location.Accuracy.BestForNavigation,
-      distanceInterval: 2,
+      // distanceInterval: 0,
+      timeInterval: 950, //time interval might be better
       foregroundService: {
         notificationTitle: "Location Tracking",
         notificationBody: "Expektus is tracking your location."
@@ -283,55 +285,76 @@ export default class App extends Component {
     //     error => console.log(error)
     // );
 
-    let fetchingCycs = setInterval(() => {
+    // Interval to retrieve cyclists independent of motorist movement
+    this.state.fetchingCycs = setInterval(() => {
       // Update the markers
-      let points = ws.getCyclists();
-      console.log(points);
-      this.addCyclists(points);
+      if (this.locationActive) {
+        let points = ws.getCyclists();
+        // let points = JSON.parse(message.data)
+        console.log(points);
+        // this.addCyclists(points);
+        this.state.cyclists = points;
 
-      // Call the Hazard Detection after receiving the nearby points
-      let warnings = this.callHazardDetection(points)
+        // Call the Hazard Detection after receiving the nearby points
+        let warnings = this.callHazardDetection(points)
 
-      console.log(`Hazards: ${warnings}`);
-      /*
-      if(warnings === undefined) {
-        warnings = [];
-      }*/
+        console.log(`Hazards: ${warnings}`);
+        /*
+        if(warnings === undefined) {
+          warnings = [];
+        }*/
 
-      // Update the state
-      this.setState({
-        cyclists: points,
-        hazards: warnings
-      })
+        console.log(this.locationActive);
+        // Update the state
+        // this.setState({
+        //   cyclists: points,
+        //   hazards: warnings
+        // })
+        this.state.cyclists = points;
+        this.state.hazards = warnings;
 
-      // Play the Hazard sound if a hazard has been detected
-      if(warnings !==null && warnings !== undefined) {
-        if(warnings.length > 0) {
-          this.playSound(this);
+        // Play the Hazard sound if a hazard has been detected
+        if(warnings !==null && warnings !== undefined) {
+          if(warnings.length > 0) {
+            this.playSound(this);
+          }
         }
       }
 
-      if(!this.locationActive) {
-        clearInterval(fetchingCycs);
-      }
+      // if(!this.locationActive) {
+      //   clearInterval(this.state.fetchingCycs);
+      // }
 
-    }, 500);
+    }, 1200);
+
+    // Add event listener for when server sends cyclists data to us
+    // ws.ws.addEventListener("message", this.websocketGetCyclists);
 
     this.locationActive = true;
   }
 
   /**
-   * Stop location tasks
+   * Call back for getting cyclists from websocket
+   * Could be used instead of interval but will update constantly
+   */
+  // websocketGetCyclists = (message) => {
+    
+  // }
+
+  /**
+   * Stop/clean up location tasks
    */
   stopLocation = async () => {
     console.log(`Map Screen mounted? ${this.locationActive}`);
     if (this.locationActive) {
       console.log("Removing keep awake and close socket");
+      this.locationActive = false;
       try {
         KeepAwake.deactivate();
       } catch(error) {
         console.log(error);
       }
+      //ws?.ws?.removeEventListener("message", this.websocketGetCyclists)
       ws?.close();
     }
     this.locationActive = false;
@@ -348,6 +371,7 @@ export default class App extends Component {
   componentWillUnmount = async () => {
     
     //clearInterval(this.state.intervalID);
+    clearInterval(this.state.fetchingCycs);  
     this.stopLocation();
   }
 
@@ -366,6 +390,8 @@ export default class App extends Component {
     console.log(`Sending: ${JSON.stringify(motorRequest)}`);
     try {
       ws.send(motorRequest);
+
+      // Moved the ws.getCyclists(); hazards stuff into interval. Move back if calculations work better here
 
       // Check if logging
       if(this.state.logging) {
@@ -601,7 +627,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     // Send the data.location heading first to load map & reduce unnecessary wait then call await req
     if(hasFirstPosSet) {
       res = await Location.getHeadingAsync(); // This gives more stable direction readings
-      heading = res.magHeading;
+      heading = res.trueHeading;
     }
     else {
       heading = data.locations[0].coords.heading;
