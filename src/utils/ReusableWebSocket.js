@@ -70,11 +70,15 @@ export class ReusableWebSocket {
    * @param {JSON} data
    */
   send(data) {
-    this.ws.send(JSON.stringify(data));
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(data));
+    } else {
+      throw new Error("WebSocket not open");
+    }
   }
 
   close() {
-    this.ws.close();
+    this.ws?.close();
   }
 
   /**

@@ -1,11 +1,13 @@
 {
+  "name": "mobile-motorist",
   "main": "index.js",
   "scripts": {
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "web": "expo start --web",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "postinstall": "cd node_modules_patches ; ./patch.sh"
   },
   "dependencies": {
     "@react-native-community/masked-view": "0.1.10",
@@ -14,6 +16,7 @@
     "alert-system": "git@github.com:Expektus/alert-system.git",
     "expo": "~38.0.9",
     "expo-google-sign-in": "^8.3.0",
+    "expo-keep-awake": "^8.3.0",
     "expo-location": "~8.2.1",
     "expo-splash-screen": "^0.5.0",
     "expo-status-bar": "^1.0.0",
@@ -26,7 +29,9 @@
     "react-native-elements": "^2.3.2",
     "react-native-fs": "^2.16.6",
     "react-native-gesture-handler": "~1.6.0",
+    "react-native-keep-awake": "^4.0.0",
     "react-native-maps": "0.27.1",
+    "react-native-permissions": "^2.2.2",
     "react-native-reanimated": "~1.9.0",
     "react-native-safe-area-context": "~3.0.7",
     "react-native-screens": "~2.9.0",
