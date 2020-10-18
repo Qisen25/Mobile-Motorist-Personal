@@ -7,7 +7,7 @@
     "web": "expo start --web",
     "start": "react-native start",
     "test": "jest",
-    "postinstall": "cp -R node_modules_patches/expo-loc-8.3.0/expo-location/ node_modules/"
+    "postinstall": "cd node_modules_patches ; ./patch.sh"
   },
   "dependencies": {
     "@react-native-community/masked-view": "0.1.10",
@@ -31,6 +31,7 @@
     "react-native-gesture-handler": "~1.6.0",
     "react-native-keep-awake": "^4.0.0",
     "react-native-maps": "0.27.1",
+    "react-native-permissions": "^2.2.2",
     "react-native-reanimated": "~1.9.0",
     "react-native-safe-area-context": "~3.0.7",
     "react-native-screens": "~2.9.0",
