@@ -7,7 +7,7 @@
     "web": "expo start --web",
     "start": "react-native start",
     "test": "jest",
-    "postinstall": "cd node_modules_patches ; ./patch.sh"
+    "postinstall": "cd node_modules_patches ; node modulePatch.js"
   },
   "dependencies": {
     "@react-native-community/masked-view": "0.1.10",
@@ -22,6 +22,7 @@
     "expo-status-bar": "^1.0.0",
     "expo-task-manager": "^8.4.0",
     "expo-updates": "~0.2.10",
+    "fs-extra": "^9.0.1",
     "mathjs": "^7.3.0",
     "react": "~16.11.0",
     "react-dom": "~16.11.0",
