@@ -27,7 +27,9 @@ import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
 import KeepAwake from 'react-native-keep-awake';
 import GpsPermissionModal from '../components/GpsPermissionModal'
 
+// File Loading
 import RNFS from "react-native-fs";
+import DocumentPicker from 'react-native-document-picker';
 
 // For sound functionality, basic usage example from: https://github.com/zmxv/react-native-sound was used.
 import Sound from 'react-native-sound';
@@ -70,7 +72,11 @@ export default class App extends Component {
         logging: false,
         logFilename: "default",
         routeCounter:0,
-        fetchingCycs: null
+        fetchingCycs: null,
+        playingLoadedRoute: false,
+        routeFile: "None",
+        loadedRouteContents: [],
+        loadedRouteMarker: 0
       }
   }
 
@@ -98,12 +104,14 @@ export default class App extends Component {
   }
 
   onLocationUpdate = ({ latitude, longitude, speed, direction }) => {
-    this.setState({
-      latitude: latitude,
-      longitude: longitude,
-      speed: speed,
-      direction: direction
-    })
+    if(!this.state.playingLoadedRoute) {
+      this.setState({
+        latitude: latitude,
+        longitude: longitude,
+        speed: speed,
+        direction: direction
+      })
+    }
 
     //On every 3 location updates, check route integrity
     if(this.state.routeCounter%5==0){
@@ -335,14 +343,42 @@ export default class App extends Component {
   // This is called when the users location changes
   usersLocationChange = (coords) => {
 
-    let motorRequest = {
-      'type': 'motorist',
-      'userID': 'some_id',
-      'long': this.state.longitude,
-      'lat': this.state.latitude,
-      'direction': this.state.direction,
-      'speed': this.state.speed
-    };
+    let motorRequest = {};
+
+    if(this.state.playingLoadedRoute) {
+      let mockData = JSON.parse(this.state.loadedRouteContents[this.state.loadedRouteMarker]
+                     .split("=>")[1]);
+
+      motorRequest = {
+        'type': 'motorist',
+        'userID': 'some_id',
+        'long': mockData.long,
+        'lat': mockData.lat,
+        'direction': mockData.direction,
+        'speed': mockData.speed
+      };
+
+      // Update state to show mock location of the map
+      this.setState({
+        latitude: motorRequest.lat,
+        longitude: motorRequest.long,
+        direction: motorRequest.direction,
+        speed: motorRequest.speed
+      });
+
+      // Increment the position in the loaded file
+      this.state.loadedRouteMarker = (this.state.loadedRouteMarker + 1 ) % (this.state.loadedRouteContents.length - 1 );
+    }
+    else {
+      motorRequest = {
+        'type': 'motorist',
+        'userID': 'some_id',
+        'long': this.state.longitude,
+        'lat': this.state.latitude,
+        'direction': this.state.direction,
+        'speed': this.state.speed
+      };
+    }
 
     // Time that the GPS was read
     let timestamp = new Date()
@@ -573,6 +609,59 @@ export default class App extends Component {
                 }}
                 placeholder={"Enter File Name"}/>
             </View>
+              <View style={styles.routePlayStyle}>
+                  {
+                    // Button to load the Route File
+                    <TouchableOpacity onPress={async () => {
+                        console.log("loading file");
+                        try {
+                          // Let the User pick the file
+                          const response = await DocumentPicker.pick({
+                            type: [DocumentPicker.types.plainText],
+                          });
+
+                          // Load the selected file into memory
+                          RNFS.readFile(response.uri, 'utf8')
+                              .then((contents) => {
+                                this.setState({
+                                  loadedRouteContents: contents.split("\n"),
+                                  routeFile: response.name});
+                              })
+                              .catch((err) => {
+                                console.log(err.message);
+                              });
+                        } catch (err) {
+                          if (DocumentPicker.isCancel(err)) {
+                          }
+                          else {
+                            console.log(err);
+                          }
+                        }
+                    }}>
+                      <Image source={require("../../assets/load.png")}
+                            style={{height: 30, width: 30}}/>
+                    </TouchableOpacity>
+                  }
+                  {
+                    this.state.playingLoadedRoute &&
+                    <TouchableOpacity onPress={async () => {
+                        this.setState({playingLoadedRoute: false});
+                    }}>
+                      <Image source={require("../../assets/stop.png")}
+                            style={{height: 30, width: 30}}/>
+                    </TouchableOpacity>
+                  }
+                  {
+                    !this.state.playingLoadedRoute &&
+                    <TouchableOpacity onPress={async () => {
+                        this.setState({playingLoadedRoute: true});
+                    }}>
+                      <Image source={require("../../assets/play.png")}
+                            style={{height: 30, width: 30}}/>
+                    </TouchableOpacity>
+                  }
+                  <Text style={styles.routeFileText}>{this.state.routeFile}</Text>
+            </View>
           </View>
 
           <View style={styles.subContainer}>
@@ -684,6 +773,19 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: "0%",
     flexDirection: "row"
+  },
+  routePlayStyle:{
+    position: "absolute",
+    top: "15%",
+    flexDirection: "row"
+  },
+  routeFileText: {
+    flex: 1,
+    marginTop: 5,
+    marginLeft: 3,
+    fontWeight: "bold",
+    justifyContent: 'center',
+    alignItems: 'center'
   }
 })
 
