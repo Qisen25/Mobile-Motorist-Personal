@@ -27,13 +27,14 @@ import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
 import KeepAwake from 'react-native-keep-awake';
 import GpsPermissionModal from '../components/GpsPermissionModal'
 
+// File Loading
 import RNFS from "react-native-fs";
+import DocumentPicker from 'react-native-document-picker';
 
 // For sound functionality, basic usage example from: https://github.com/zmxv/react-native-sound was used.
 import Sound from 'react-native-sound';
 
 const LOCATION_TASK_NAME = "background-location-task";
-const GPS_LOG_FILE = "GPS_LOGS.txt";
 const LATITUDE_DELTA = 0.01;
 const LONGITUDE_DELTA = 0.01;
 
@@ -69,9 +70,13 @@ export default class App extends Component {
         route:[],
         // intervalID: null, // No need just chuck just chuck usersLocationChange in onLocationUpdate
         logging: false,
-        logTag: "default",
+        logFilename: "default",
         routeCounter:0,
-        fetchingCycs: null
+        fetchingCycs: null,
+        playingLoadedRoute: false,
+        routeFile: "None",
+        loadedRouteContents: [],
+        loadedRouteMarker: 0
       }
   }
 
@@ -99,12 +104,14 @@ export default class App extends Component {
   }
 
   onLocationUpdate = ({ latitude, longitude, speed, direction }) => {
-    this.setState({
-      latitude: latitude,
-      longitude: longitude,
-      speed: speed,
-      direction: direction
-    })
+    if(!this.state.playingLoadedRoute) {
+      this.setState({
+        latitude: latitude,
+        longitude: longitude,
+        speed: speed,
+        direction: direction
+      })
+    }
 
     //On every 3 location updates, check route integrity
     if(this.state.routeCounter%5==0){
@@ -159,18 +166,6 @@ export default class App extends Component {
           this.gpsPermModalProp.current.GpsPermissionPopup();
         }
       }, 6000);
-    }
-
-    let path = RNFS.DocumentDirectoryPath + '/' + GPS_LOG_FILE;
-    if(!RNFS.exists(path)) {
-      RNFS.writeFile(path, 'GPS Log:\n', 'utf8')
-        .then((success) => {
-          console.log('FILE WRITTEN!');
-          console.log(RNFS.ExternalDirectoryPath + '/' + GPS_LOG_FILE);
-        })
-        .catch((err) => {
-          console.log(err.message);
-        });
     }
   }
 
@@ -348,14 +343,46 @@ export default class App extends Component {
   // This is called when the users location changes
   usersLocationChange = (coords) => {
 
-    let motorRequest = {
-      'type': 'motorist',
-      'userID': 'some_id',
-      'long': this.state.longitude,
-      'lat': this.state.latitude,
-      'direction': this.state.direction,
-      'speed': this.state.speed
-    };
+    let motorRequest = {};
+
+    if(this.state.playingLoadedRoute) {
+      let mockData = JSON.parse(this.state.loadedRouteContents[this.state.loadedRouteMarker]
+                     .split("=>")[1]);
+
+      motorRequest = {
+        'type': 'motorist',
+        'userID': 'some_id',
+        'long': mockData.long,
+        'lat': mockData.lat,
+        'direction': mockData.direction,
+        'speed': mockData.speed
+      };
+
+      // Update state to show mock location of the map
+      this.setState({
+        latitude: motorRequest.lat,
+        longitude: motorRequest.long,
+        direction: motorRequest.direction,
+        speed: motorRequest.speed
+      });
+
+      // Increment the position in the loaded file
+      this.state.loadedRouteMarker = (this.state.loadedRouteMarker + 1 ) % (this.state.loadedRouteContents.length - 1 );
+    }
+    else {
+      motorRequest = {
+        'type': 'motorist',
+        'userID': 'some_id',
+        'long': this.state.longitude,
+        'lat': this.state.latitude,
+        'direction': this.state.direction,
+        'speed': this.state.speed
+      };
+    }
+
+    // Time that the GPS was read
+    let timestamp = new Date()
+
     // Need to query for cyclists
     console.log(`Sending: ${JSON.stringify(motorRequest)}`);
     try {
@@ -365,17 +392,34 @@ export default class App extends Component {
 
       // Check if logging
       if(this.state.logging) {
-        let path = RNFS.ExternalDirectoryPath + '/' + GPS_LOG_FILE;
-        RNFS.appendFile(path, `${this.state.logTag} => ${JSON.stringify(motorRequest)}\n`, 'utf8')
+        // Check if the filename specified exists
+        let path = RNFS.ExternalDirectoryPath + "/" + this.state.logFilename + ".txt";
+        if(!RNFS.exists(path)) {
+          RNFS.writeFile(path, '', 'utf8')
+            .then((success) => {
+              console.log(`File Created: ${path}`);
+            })
+            .catch((err) => {
+              console.log(err.message);
+            });
+        }
+        let gps = {
+          'long': motorRequest.long,
+          'lat': motorRequest.lat,
+          'direction': motorRequest.direction,
+          'speed': motorRequest.speed
+        };
+        RNFS.appendFile(path, `[${timestamp}]=>${JSON.stringify(gps)}\n`, 'utf8')
             .then((success) => {
             })
             .catch((err) => {
               console.log(err.message);
             });
       }
-    } catch(error) {
-      console.log(error);
-    }
+
+      } catch(error) {
+        console.log(error);
+      }
   }
 
   callHazardDetection = (points) => {
@@ -561,9 +605,62 @@ export default class App extends Component {
                     })}}/>
                 }
                 <TextInput style={styles.textInput} onSubmitEditing={(event) => {
-                  this.state.logTag = event.nativeEvent.text;
+                  this.state.logFilename = event.nativeEvent.text;
                 }}
-                placeholder={"Enter TAG"}/>
+                placeholder={"Enter File Name"}/>
+            </View>
+              <View style={styles.routePlayStyle}>
+                  {
+                    // Button to load the Route File
+                    <TouchableOpacity onPress={async () => {
+                        console.log("loading file");
+                        try {
+                          // Let the User pick the file
+                          const response = await DocumentPicker.pick({
+                            type: [DocumentPicker.types.plainText],
+                          });
+
+                          // Load the selected file into memory
+                          RNFS.readFile(response.uri, 'utf8')
+                              .then((contents) => {
+                                this.setState({
+                                  loadedRouteContents: contents.split("\n"),
+                                  routeFile: response.name});
+                              })
+                              .catch((err) => {
+                                console.log(err.message);
+                              });
+                        } catch (err) {
+                          if (DocumentPicker.isCancel(err)) {
+                          }
+                          else {
+                            console.log(err);
+                          }
+                        }
+                    }}>
+                      <Image source={require("../../assets/load.png")}
+                            style={{height: 30, width: 30}}/>
+                    </TouchableOpacity>
+                  }
+                  {
+                    this.state.playingLoadedRoute &&
+                    <TouchableOpacity onPress={async () => {
+                        this.setState({playingLoadedRoute: false});
+                    }}>
+                      <Image source={require("../../assets/stop.png")}
+                            style={{height: 30, width: 30}}/>
+                    </TouchableOpacity>
+                  }
+                  {
+                    !this.state.playingLoadedRoute &&
+                    <TouchableOpacity onPress={async () => {
+                        this.setState({playingLoadedRoute: true});
+                    }}>
+                      <Image source={require("../../assets/play.png")}
+                            style={{height: 30, width: 30}}/>
+                    </TouchableOpacity>
+                  }
+                  <Text style={styles.routeFileText}>{this.state.routeFile}</Text>
             </View>
           </View>
 
@@ -676,6 +773,19 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: "0%",
     flexDirection: "row"
+  },
+  routePlayStyle:{
+    position: "absolute",
+    top: "15%",
+    flexDirection: "row"
+  },
+  routeFileText: {
+    flex: 1,
+    marginTop: 5,
+    marginLeft: 3,
+    fontWeight: "bold",
+    justifyContent: 'center',
+    alignItems: 'center'
   }
 })
 
