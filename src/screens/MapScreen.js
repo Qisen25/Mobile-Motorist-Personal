@@ -33,7 +33,6 @@ import RNFS from "react-native-fs";
 import Sound from 'react-native-sound';
 
 const LOCATION_TASK_NAME = "background-location-task";
-const GPS_LOG_FILE = "GPS_LOGS.txt";
 const LATITUDE_DELTA = 0.01;
 const LONGITUDE_DELTA = 0.01;
 
@@ -69,7 +68,7 @@ export default class App extends Component {
         route:[],
         // intervalID: null, // No need just chuck just chuck usersLocationChange in onLocationUpdate
         logging: false,
-        logTag: "default",
+        logFilename: "default",
         routeCounter:0,
         fetchingCycs: null
       }
@@ -159,18 +158,6 @@ export default class App extends Component {
           this.gpsPermModalProp.current.GpsPermissionPopup();
         }
       }, 6000);
-    }
-
-    let path = RNFS.DocumentDirectoryPath + '/' + GPS_LOG_FILE;
-    if(!RNFS.exists(path)) {
-      RNFS.writeFile(path, 'GPS Log:\n', 'utf8')
-        .then((success) => {
-          console.log('FILE WRITTEN!');
-          console.log(RNFS.ExternalDirectoryPath + '/' + GPS_LOG_FILE);
-        })
-        .catch((err) => {
-          console.log(err.message);
-        });
     }
   }
 
@@ -356,6 +343,10 @@ export default class App extends Component {
       'direction': this.state.direction,
       'speed': this.state.speed
     };
+
+    // Time that the GPS was read
+    let timestamp = new Date()
+
     // Need to query for cyclists
     console.log(`Sending: ${JSON.stringify(motorRequest)}`);
     try {
@@ -365,17 +356,34 @@ export default class App extends Component {
 
       // Check if logging
       if(this.state.logging) {
-        let path = RNFS.ExternalDirectoryPath + '/' + GPS_LOG_FILE;
-        RNFS.appendFile(path, `${this.state.logTag} => ${JSON.stringify(motorRequest)}\n`, 'utf8')
+        // Check if the filename specified exists
+        let path = RNFS.ExternalDirectoryPath + "/" + this.state.logFilename + ".txt";
+        if(!RNFS.exists(path)) {
+          RNFS.writeFile(path, '', 'utf8')
+            .then((success) => {
+              console.log(`File Created: ${path}`);
+            })
+            .catch((err) => {
+              console.log(err.message);
+            });
+        }
+        let gps = {
+          'long': motorRequest.long,
+          'lat': motorRequest.lat,
+          'direction': motorRequest.direction,
+          'speed': motorRequest.speed
+        };
+        RNFS.appendFile(path, `[${timestamp}]=>${JSON.stringify(gps)}\n`, 'utf8')
             .then((success) => {
             })
             .catch((err) => {
               console.log(err.message);
             });
       }
-    } catch(error) {
-      console.log(error);
-    }
+
+      } catch(error) {
+        console.log(error);
+      }
   }
 
   callHazardDetection = (points) => {
@@ -561,9 +569,9 @@ export default class App extends Component {
                     })}}/>
                 }
                 <TextInput style={styles.textInput} onSubmitEditing={(event) => {
-                  this.state.logTag = event.nativeEvent.text;
+                  this.state.logFilename = event.nativeEvent.text;
                 }}
-                placeholder={"Enter TAG"}/>
+                placeholder={"Enter File Name"}/>
             </View>
           </View>
 
