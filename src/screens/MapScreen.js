@@ -98,36 +98,6 @@ export default class App extends Component {
     })
   }
 
-  routeIntegrity = async () => {
-    if (this.state.route.length != 0) {
-      const currentRoute = this.state.route;
-      const position = await routeTools.findCurrentEdge(currentRoute);
-      if (position != -1) {
-        // Non adjusted GPS values to be used here
-        const edgeOrientation = routeTools.findEdgeOrientation(currentRoute[position], (this.state.latitude, this.state.longitude));
-        if ((Math.abs(edgeOrientation - this.state.direction)) < MOE_Deg) {
-          var currentLength = this.state.route.length;
-          currentRoute = await currentRoute.splice(position);
-          this.setState({
-            route: currentRoute
-          });
-        } else {
-          // Get a new route
-          this.setState({
-            route: []
-          });
-          getRoute();
-        }
-      } else {
-        // Get a new route
-        this.setState({
-            route: []
-        });
-        getRoute();
-      }
-    }
-  }
-
   onLocationUpdate = ({ latitude, longitude, speed, direction }) => {
     this.setState({
       latitude: latitude,
