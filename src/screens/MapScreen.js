@@ -76,11 +76,12 @@ export default class App extends Component {
         playingLoadedRoute: false,
         routeFile: "None",
         loadedRouteContents: [],
-        loadedRouteMarker: 0
+        loadedRouteMarker: 0,
       }
   }
 
   locationActive = false;
+  watchHead = null;
 
   playSound(component){
     const callback = (error, sound) =>{
@@ -201,13 +202,20 @@ export default class App extends Component {
 
     await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
       accuracy: Location.Accuracy.BestForNavigation,
-      // distanceInterval: 0,
-      timeInterval: 950, //time interval might be better
+      distanceInterval: 1.3,
+      // timeInterval: 1500, //time interval might be better
       foregroundService: {
         notificationTitle: "Location Tracking",
         notificationBody: "Expektus is tracking your location."
       }
     });
+
+    this.watchHead = setInterval( async () => {
+      if(this.state.speed < 0.5) {
+        const heading = await Location.getHeadingAsync();
+        this.setState({direction: heading.trueHeading})
+      }
+    }, 1400);
 
     console.log("+++++++ Map Screen component mounted +++++++");
     // Keep screen awake during Nav
@@ -325,6 +333,7 @@ export default class App extends Component {
     this.locationActive = false;
     // Clean up background tasks
     await watchPos?.remove();
+    clearInterval(this.watchHead);
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
     await TaskManager.unregisterAllTasksAsync();
     console.log("+++++++ Unmounted Map Screen! Array below should show no tasks. +++++++++")
@@ -679,26 +688,20 @@ export default class App extends Component {
   }
 }
 
-let hasFirstPosSet = false;
 // Example code used:https://docs.expo.io/versions/latest/sdk/task-manager/#taskmanagerdefinetasktaskname-task
-TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
+TaskManager.defineTask(LOCATION_TASK_NAME, ({ data, error }) => {
   const timeStamp = new Date();
   if (error) {
     console.log("error")
     return
   }
   if (data.locations.length >= 1) {
-    let res;
     let heading;
-    // console.log(data.locations.length)
-    // Send the data.location heading first to load map & reduce unnecessary wait then call await req
-    if(hasFirstPosSet) {
-      res = await Location.getHeadingAsync(); // This gives more stable direction readings
-      heading = res.trueHeading;
-    }
-    else {
-      heading = data.locations[0].coords.heading;
-    }
+    
+    // Removed getHeadingAsync since have better understanding now.
+    // getHeadingAsync should be used when user is idle not when moving.
+    // Google maps is also not accurate with getting bearing
+    heading = data.locations[0].coords.heading;
 
     const { latitude, longitude } = data.locations[0].coords;
     const speed = data.locations[0].coords.speed;
@@ -708,7 +711,6 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     locationService.setLocation({latitude, longitude, speed, direction});
 
     console.log(`Location Recorded: [${timeStamp}]:\n[${latitude}, ${longitude}, ${direction}, ${speed}]`);
-    hasFirstPosSet = true;// Send and plug first pos then can do await getHeadingAsync
   }
 });
 
