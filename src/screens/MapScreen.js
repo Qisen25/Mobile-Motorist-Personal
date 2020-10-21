@@ -22,6 +22,7 @@ import ws from '../utils/ReusableWebSocket';
 const { Motorist } = require("../../node_modules/alert-system/src/motorist");
 const { Cyclist } = require("../../node_modules/alert-system/src/cyclist");
 const { CollisionDetector } = require("../../node_modules/alert-system/src/collisionDetector");
+const hazardDetect = require("../../node_modules/alert-system/src/collisionDetector");
 import AuthenticationContext from "../contexts/AuthenticationContext";
 import { activateKeepAwake, deactivateKeepAwake } from 'expo-keep-awake';
 import KeepAwake from 'react-native-keep-awake';
@@ -95,6 +96,31 @@ export default class App extends Component {
 
     };
     const url = require('../../assets/done-for-you.mp3');
+    const sound = new Sound(url,error => callback(error,sound));
+  }
+
+  warnIntersect = (dist) => {
+    ToastAndroid.showWithGravityAndOffset(
+      `In about ${dist}m you may cross paths with a cyclist!`,
+      ToastAndroid.LONG,
+      ToastAndroid.BOTTOM,
+      25,
+      50
+    );
+  };
+
+  playBell(component){
+    const callback = (error, sound) =>{
+      if (error) {
+        console.log(error.message);
+        return;
+      }
+      sound.play(() => {
+        sound.release();
+      });
+
+    };
+    const url = require('../../assets/bell.mp3');
     const sound = new Sound(url,error => callback(error,sound));
   }
 
@@ -202,7 +228,7 @@ export default class App extends Component {
 
     await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
       accuracy: Location.Accuracy.BestForNavigation,
-      distanceInterval: 1.3,
+      distanceInterval: 2,
       // timeInterval: 1500, //time interval might be better
       foregroundService: {
         notificationTitle: "Location Tracking",
@@ -264,40 +290,46 @@ export default class App extends Component {
       if (this.locationActive) {
         let points = ws.getCyclists();
         // let points = JSON.parse(message.data)
-        console.log(points);
+        // console.log(points);
         // this.addCyclists(points);
         this.state.cyclists = points;
+        
+        if(points.length > 0) {
+          // Call the Hazard Detection after receiving the nearby points
+          let warnings = this.callHazardDetection(points);
 
-        // Call the Hazard Detection after receiving the nearby points
-        let warnings = this.callHazardDetection(points)
+          // let detector = new CollisionDetector();
+          let intersect = hazardDetect.crossPathEstimation(this.state, points);
 
-        console.log(`Hazards: ${warnings}`);
-        /*
-        if(warnings === undefined) {
-          warnings = [];
-        }*/
-
-        console.log(this.locationActive);
-        // Update the state
-        // this.setState({
-        //   cyclists: points,
-        //   hazards: warnings
-        // })
-        this.state.cyclists = points;
-        this.state.hazards = warnings;
-
-        // Play the Hazard sound if a hazard has been detected
-        if(warnings !==null && warnings !== undefined) {
-          if(warnings.length > 0) {
-            this.playSound(this);
+          console.log(intersect.length);
+          if(intersect.length > 0) {
+            this.playBell(this);
+            this.warnIntersect(intersect[0].intersectDist);
           }
-        }
-      }
 
-      // if(!this.locationActive) {
-      //   clearInterval(this.state.fetchingCycs);
-      // }
+          // console.log(`Hazards: ${warnings}`);
+          /*
+          if(warnings === undefined) {
+            warnings = [];
+          }*/
 
+          console.log(this.locationActive);
+          // Update the state
+          // this.setState({
+          //   cyclists: points,
+          //   hazards: warnings
+          // })
+          this.state.cyclists = points;
+          this.state.hazards = warnings;
+
+          // Play the Hazard sound if a hazard has been detected
+          if(warnings !==null && warnings !== undefined) {
+            if(warnings.length > 0) {
+              this.playSound(this);
+            }
+          }
+        }// end if point.length
+      }// end if
     }, 1200);
 
     // Add event listener for when server sends cyclists data to us
@@ -533,10 +565,6 @@ export default class App extends Component {
   render(){
     return (
    <View style={styles.container}>
-          <View style={styles.logoContainer}>
-            <Image style={styles.logo} source={require("../../assets/expektus-logo.png")} />
-          </View>
-
           <GpsPermissionModal ref={this.gpsPermModalProp} />
 
           <View style={styles.mapContainer} >
@@ -710,7 +738,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, ({ data, error }) => {
 
     locationService.setLocation({latitude, longitude, speed, direction});
 
-    console.log(`Location Recorded: [${timeStamp}]:\n[${latitude}, ${longitude}, ${direction}, ${speed}]`);
+    // console.log(`Location Recorded: [${timeStamp}]:\n[${latitude}, ${longitude}, ${direction}, ${speed}]`);
   }
 });
 
