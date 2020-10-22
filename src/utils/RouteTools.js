@@ -92,17 +92,17 @@ function findEdgeOrientation(edge) {
 	return degrees;
 }
 
-function findCurrentEdge(route, currentPoint, checkMax) {
+function findCurrentEdge(startOfRoute, currentPoint) {
 	const GPSADJUSTER = 111139;
 	//Margin of Error for Metres
-	const MOE_M = 20.0//10.0;
+	const MOE_M = 15.0;
 
-	const length = route.length;
+	const length = startOfRoute.length;
 	var position = -1;
 	var counter = 0;
 
-	while (counter < length && counter < checkMax && position == -1) {
-		var edge = route[counter];
+	while (counter < length && position == -1) {
+		var edge = startOfRoute[counter];
 		adjEC = adjustEdgeAndCurrent(edge, currentPoint);
 		a_edge = adjEC.edge;
 		a_currentPoint = adjEC.currentPoint;
@@ -126,59 +126,85 @@ function findCurrentEdge(route, currentPoint, checkMax) {
 function selectRouteStart(currentRoute,checkMax){
 	counter = 0;
 	startOfRoute = [];
-	var updatedFormat = [];
 
-	while(counter < checkMax && counter < currentRoute.length){
+	/*while(counter < checkMax && counter < currentRoute.length){
 		edge = [currentRoute[counter].latitude,currentRoute[counter].longitude];
 		startOfRoute.push(edge);
 		counter = counter + 1;
+	}*/
+	while(counter < checkMax && counter < currentRoute.length){
+		startOfRoute.push(currentRoute[counter]);
+		counter = counter + 1;
 	}
-
-	if(startOfRoute.length > 1){
-		updatedFormat = convertToEdgeFormat(startOfRoute);
-	}
-
-	return updatedFormat;
+	return startOfRoute;
 }
 
 function convertToEdgeFormat(startOfRoute){
 	counter = 0;
-	updatedFormat = [];
-	while(counter < startOfRoute.length-1){
-		if(counter!=startOfRoute.length-1){
-			var newEdge = [startOfRoute[counter],startOfRoute[counter+1]];
-			updatedFormat.push(newEdge);
+	arrayFormat = [];
+	edgeFormat = [];
+
+	if (startOfRoute.length > 1) {
+		// convert to format [lat, long]
+		while(counter < startOfRoute.length){
+			edge = [startOfRoute[counter].latitude,startOfRoute[counter].longitude];
+			arrayFormat.push(edge);
 			counter = counter + 1;
 		}
-	}
-	return updatedFormat;
-}
 
-function routeIntegrity (currentDirection,currentPosition,currentRoute) {
-	//Margin of Error for Orientation
-	const MOE_Deg = 10.0;
-	const CHECKMAX = 5;
-	var updatedRoute = [];
-
-	var startOfRoute = selectRouteStart(currentRoute,CHECKMAX);
-
-	if (startOfRoute.length != 0) {
-		console.log(1);
-
-		const position = routeTools.findCurrentEdge(startOfRoute, currentPosition, CHECKMAX);
-
-		if (position != -1) {
-			console.log(2);
-			// Non adjusted GPS values used here
-			const edgeOrientation = routeTools.findEdgeOrientation(startOfRoute[position], (currentPosition.latitude, currentPosition.longitude));
-			if ((Math.abs(edgeOrientation - currentDirection)) < MOE_Deg) {
-				console.log(3);
-				var currentLength = currentRoute.length;
-				updatedRoute = currentRoute.splice(position);
-			} 
+		counter = 0;
+		// convert to format [[edge][edge]...], where edge = [[lat, long],[lat, long]]
+		while(counter < arrayFormat.length-1){
+			if(counter!=arrayFormat.length-1){
+				var newEdge = [arrayFormat[counter],arrayFormat[counter+1]];
+				edgeFormat.push(newEdge);
+				counter = counter + 1;
+			}
 		}
 	}
-	return updatedRoute;
+
+	return edgeFormat;
+}
+//What about if route is a single point? It should be...
+function routeIntegrity (currentDirection,currentPosition,currentRoute) {
+	// Margin of Error for Orientation
+	const MOE_Deg = 10.0;
+	// Limit for edge check
+	const CHECKMAX = 5;
+
+	// Return variables
+	var updatedRoute = [];
+	var arrived = false;
+
+	// A route is invalid if only a single GPS point.  The routing will not run and the route will be cleared(same status as arrival).
+	if (currentRoute.length > 1) {
+
+		var startOfRoute = selectRouteStart(currentRoute,CHECKMAX);
+		var updatedFormat = convertToEdgeFormat(startOfRoute);
+
+		if (updatedFormat.length > 1) {
+			const position = routeTools.findCurrentEdge(updatedFormat, currentPosition);
+			if (position != -1) {
+				// Non adjusted GPS values used here
+				const edgeOrientation = routeTools.findEdgeOrientation(updatedFormat[position], (currentPosition.latitude, currentPosition.longitude));
+				if ((Math.abs(edgeOrientation - currentDirection)) < MOE_Deg) {
+					updatedRoute = currentRoute.splice(position);
+				} 
+			}
+		}
+		// Check if the current location is within the single edge, if it is, arrival has occurred.
+		else if(updatedFormat.length == 1) {
+
+			const position = routeTools.findCurrentEdge(updatedFormat, currentPosition);
+			if (position == 0) {
+				arrived = true;
+			}
+		}
+	} else {
+		arrived = true;
+	}
+
+	return {status : arrived, newRoute : updatedRoute};
 }
 
 const routeTools = {
