@@ -165,7 +165,7 @@ function convertToEdgeFormat(startOfRoute){
 
 	return edgeFormat;
 }
-//What about if route is a single point? It should be...
+
 function routeIntegrity (currentDirection,currentPosition,currentRoute) {
 	// Margin of Error for Orientation
 	const MOE_Deg = 10.0;
