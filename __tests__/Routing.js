@@ -56,14 +56,15 @@ test('rotateEdgeAndCurrent equals { edge: [[0, 0], [4.2426,0]], currentPoint: [4
 test('createRectangle equals { tl: [ 0, 1 ], bl: [ 0, -1 ], tr: [ 2, 1 ], br: [ 2, -1 ] }', () => {
  	expect(routeTools.createRectangle([[0,0],[2,0]],1)).toStrictEqual({tl:[0,1],bl:[0,-1],tr:[2,1],br:[2,-1]});
 });
-//========================================================
-//FUNCTION: findEdgeOrientation
-//CASE: find the angle between an edge of two arbitrary gps coordinates.
-//RESULT: the correct angle between the two gps points is determined.
-test('findEdgeOrientation equals 96.51262423499946', () => {
-	 expect(routeTools.findEdgeOrientation([[39.099912, -94.581213],[38.627089, -90.200203]])).toStrictEqual(96.51262423499946);
+// //========================================================
+// //FUNCTION: findEdgeOrientation
+// //CASE: find the angle between an edge of two arbitrary gps coordinates.
+// //RESULT: the correct angle between the two gps points is determined.
+test('findEdgeOrientation equals 225', () => {
+	expect(routeTools.findEdgeOrientation([[-32.011574,115.872608], [-32.011659,115.87156]])).toBeCloseTo(264.535);
+
 });
-//========================================================
+// //========================================================
 //FUNCTION: findCurrentEdge
 //CASE: find the edge of a route which a specified gps point falls within. (First valid edge)
 //RESULT: the point is found within the first edge.
@@ -239,7 +240,7 @@ test('routeIntegrity returns [] and false', () => {
 	var expectedResponse = {status : false, newRoute : []}
 
 	routeTools.findCurrentEdge = jest.fn().mockReturnValue(0);
-	routeTools.findEdgeOrientation = jest.fn().mockReturnValue(20);
+	routeTools.findEdgeOrientation = jest.fn().mockReturnValue(100);
 
 	expect(routeTools.routeIntegrity(currentPosition,0.0,currentRoute)).toStrictEqual(expectedResponse);
 	
