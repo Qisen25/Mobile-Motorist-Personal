@@ -85,12 +85,12 @@ function findEdgeOrientation(edge) {
 	X = Math.cos(ThetaB) * Math.sin(DeltaL);
 	Y = Math.cos(ThetaA) * Math.sin(ThetaB) - Math.sin(ThetaA) * Math.cos(ThetaB) * Math.cos(DeltaL);
 	Bearing = Math.atan2(X, Y);
-	// console.log("Radians: ",Bearing)
-	// console.log("Degrees: ",(Bearing/adjuster))
 	degrees = Bearing / adjuster;
-	
+	degrees = degrees + 360;
+	degrees = degrees%360;
 	return degrees;
 }
+
 
 function findCurrentEdge(startOfRoute, currentPoint) {
 	const GPSADJUSTER = 111139;
