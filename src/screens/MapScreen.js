@@ -153,18 +153,35 @@ export default class App extends Component {
   validateRoute = () => {
     
     if(this.state.route.length>0){
-      var updatedRoute = routeTools.routeIntegrity(this.state.direction,[this.state.latitude,this.state.longitude],this.state.route);
-      
-      if(updatedRoute.length>0) {
-        console.log("updatedRoute.length>0");
-        //Update the route to the updated array
-        this.setState({
-          route:updatedRoute
-        })
-      }else {
-        console.log("getting a new route");
-        //get a new route
-        this.getRoute();
+      var routeToolsResponse = routeTools.routeIntegrity(this.state.direction,[this.state.latitude,this.state.longitude],this.state.route);
+      var updatedRoute = routeToolsResponse.newRoute;
+      var routeArrivalStatus = routeToolsResponse.status;
+
+      // has arrival occurred? Or was the  route cancelled due to being too small?
+      if (routeArrivalStatus == true) {
+          console.log("arrived");
+          this.setState({
+            mapText:""
+          })
+          this.setState({
+            route:[]
+          })
+      } else {
+
+          // route has been shrunk, update it.
+          if(updatedRoute.length>0) {
+            console.log("updatedRoute.length>0");
+            //Update the route to the updated array
+            this.setState({
+              route:updatedRoute
+            })            
+          // currentPosition was not in the route, and  arrival has not 
+          // occurred, get a new route.
+          } else {
+            console.log("getting a new route");
+            //get a new route
+            this.getRoute(); 
+          }
       }
     }
   }
