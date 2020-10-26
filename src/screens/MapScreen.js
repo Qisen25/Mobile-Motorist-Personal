@@ -56,6 +56,9 @@ export default class App extends Component {
       Sound.setCategory('Playback',true);
       this.gpsPermModalProp = React.createRef();
 
+      // Initialise the detector
+      this.collisionDetector = new CollisionDetector(null, null, this.hazardCallback);
+
       this.state = {
         latitude:0,
         longitude:0,
@@ -128,6 +131,63 @@ export default class App extends Component {
     this.setState({
       cyclists: cyclists
     })
+  }
+
+    /**
+   * The hazard callback to update the UI and respond to the hazards that are determined
+   * @param {Alert} alert : The alert object returned once the collision detection is complete
+   */
+  hazardCallback = (alert) => {
+    let hazards = null;
+
+    // Check if the alert returns no hazards
+    if(alert === null) {
+      hazards = [];
+      console.log("No Hazards");
+    }
+    else {
+      /**
+       * To avoid having the warning sound repeat multiple times after a hazard has already
+       * been determined compare the new hazards list with the current list to determine
+       * if new hazards have been identifed
+       */
+      hazards = alert.hazards;
+
+      if(this.newHazardFound(this.state.hazards, hazards)) {
+        // Play the warning sound
+        this.playSound(this);
+      }
+    }
+
+    // Update Hazards state to redraw the UI
+    this.setState({
+      hazards: hazards
+    });
+  }
+
+  /**
+   * Determines if a new hazard has been identified
+   * @param {Array<Hazard>} currentHazards : The currenttly stored hazards known to the motorist
+   * @param {Array<Hazard>} newHazards : The new list of identified hazards (Can't be empty [])
+   */
+  newHazardFound = (currentHazards, newHazards) => {
+    // All newHazards are actually new
+    if(currentHazards.length === 0) {
+      return true;
+    }
+
+    // Iterate over newHazards to check if they are currently in the current hazards
+    newHazards.forEach(nHazard => {
+      const id = nHazard.vehicle.id;
+      const index = currentHazards.findIndex(cHazard => cHazard.vehicle.id === id);
+
+      // Vehicle not found
+      if(index === -1) {
+        return true;
+      }
+    });
+
+    return false;
   }
 
   onLocationUpdate = ({ latitude, longitude, speed, direction }) => {
@@ -313,9 +373,10 @@ export default class App extends Component {
         
         if(points.length > 0) {
           // Call the Hazard Detection after receiving the nearby points
-          let warnings = this.callHazardDetection(points);
+          this.callHazardDetection(points);
 
           // let detector = new CollisionDetector();
+          /* TESTING ALERTS
           let intersect = hazardDetect.crossPathEstimation(this.state, points);
 
           console.log(intersect.length);
@@ -323,6 +384,7 @@ export default class App extends Component {
             this.playBell(this);
             this.warnIntersect(intersect[0].intersectDist);
           }
+          */
 
           // console.log(`Hazards: ${warnings}`);
           /*
@@ -337,14 +399,7 @@ export default class App extends Component {
           //   hazards: warnings
           // })
           this.state.cyclists = points;
-          this.state.hazards = warnings;
 
-          // Play the Hazard sound if a hazard has been detected
-          if(warnings !==null && warnings !== undefined) {
-            if(warnings.length > 0) {
-              this.playSound(this);
-            }
-          }
         }// end if point.length
       }// end if
     }, 1200);
@@ -486,7 +541,6 @@ export default class App extends Component {
                                   this.state.speed,
                                   this.state.direction);
     let cyclists = [];
-    let warnings = [];
 
     points.forEach(user => {
       let bike = new Cyclist(user.key, user.longitude, user.latitude,
@@ -495,16 +549,9 @@ export default class App extends Component {
     });
 
     // Run the Hazard Detection
-    let detector = new CollisionDetector();
+    // Only run detection if cyclists have been found
     if(cyclists.length >= 1) {
-      warnings = detector.updateState(motorist, cyclists);
-    }
-
-    if(warnings === null || warnings === undefined) {
-      return [];
-    }
-    else {
-      return warnings.hazards;
+      this.collisionDetector.updateState(motorist, cyclists);
     }
   }
 
