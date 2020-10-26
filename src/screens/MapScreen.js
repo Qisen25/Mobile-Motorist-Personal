@@ -568,6 +568,98 @@ export default class App extends Component {
   }
 
   /**
+   * @returns Array of JSXs object that represents drawing all the
+   *          cyclists in the list onto the map
+   */
+  drawCyclists = () => {
+    let cyclistJSX = [];
+    const icon = "../../assets/bikeIcon.png";
+
+    this.state.cyclists.forEach(cyclist => {
+      let jsx = <Marker
+                  key={cyclist.id}
+                  coordinate={{
+                    latitude: cyclist.latitude,
+                    longitude: cyclist.longitude}}
+                  anchor={{
+                    x: 0.5,
+                    y: 0.5
+                  }}
+                >
+                <Image
+                  source={require(icon)}
+                  style={this.getCyclistImageStyle(cyclist.direction)}
+                  resizeMode="contain"
+                />
+                </Marker>;
+
+      cyclistJSX.push(jsx);
+    });
+
+    return cyclistJSX;
+  }
+
+  /**
+   * Returns the style for the cyclist icon depending on the bearing of the cyclist
+   * @param {Number} direction : Bearing in degrees
+   */
+  getCyclistImageStyle(direction) {
+    const width = 16;
+    const height = 16;
+
+    // If greater than 180 rotate the image and flip
+    if(direction > 180) {
+      return {
+        width: width,
+        height: height,
+        transform: [
+          {scaleX: -1},
+          {rotate: `${direction - 270.0}deg`}
+        ]
+      }
+    }
+    // Just rotate the image, no need to flip
+    else {
+      return {
+        width: width,
+        height: height,
+        transform: [{
+          rotate: `${direction - 90.0}deg`
+        }]
+      }
+    }
+  }
+
+  /**
+   * @returns Array of JSXs object that represents drawing all the
+   *          hazards in the list onto the map
+   */
+  drawHazards = () => {
+    let hazardsJSX = [];
+    const icon = "../../assets/bikeIconHazard.png";
+
+    this.state.hazards.forEach(hazard => {
+      let jsx = <Marker
+                  key={hazard.id}
+                  coordinate={{
+                    latitude: hazard.latitude,
+                    longitude: hazard.longitude}}
+                >
+                <Image
+                  source={require(icon)}
+                  style={{width: 16, height: 16}}
+                  resizeMode="contain"
+                />
+                </Marker>;
+
+      hazardsJSX.push(jsx);
+    });
+
+    return hazardsJSX;
+  }
+
+
+  /**
    * @returns JSX object that represents drawing the Motorist Marker on the Map
    */
   drawMotorist = () => {
@@ -591,8 +683,8 @@ export default class App extends Component {
         <Image
           source={require('../../assets/Arrow.png')}
           style={{
-            width: 28,
-            height: 28,
+            width: 16,
+            height: 16,
             transform: [{
               rotate: `${this.state.direction}deg`
             }]}}
@@ -637,6 +729,7 @@ export default class App extends Component {
 
               region={{latitude:this.state.latitude,longitude:this.state.longitude,latitudeDelta:this.state.latitudeDelta,longitudeDelta:this.state.longitudeDelta}}
               onRegionChange={this.onRegionChange}
+              minZoomLevel={19}
 
               // zoom out
               // lat deltas can handle zoom levels
@@ -658,6 +751,7 @@ export default class App extends Component {
 
               {
                 // Draw the Cyclists
+                /*
                 this.state.cyclists.map(marker =>(
                   <Marker
                     key={marker.key}
@@ -671,6 +765,8 @@ export default class App extends Component {
                       resizeMode="contain"
                     />
                   </Marker>))
+                  */
+                 this.drawCyclists()
               }
 
               {
@@ -687,6 +783,15 @@ export default class App extends Component {
 
 
             </MapView>
+            <View>
+              {
+                // Check to see if hazards are 
+                (this.state.hazards.length > 0) &&
+                <Image source={require("../../assets/Hazard.png")}
+                  style={styles.hazardStyle}/>
+              }
+            </View>
+
             <View
               style={styles.loggingStyle}>
                 {
@@ -872,6 +977,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: "15%",
     flexDirection: "row"
+  },
+  hazardStyle:{
+    position: "absolute",
+    bottom: "2%",
+    transform: [{
+      scale: 0.5
+    }]
   },
   routeFileText: {
     flex: 1,
