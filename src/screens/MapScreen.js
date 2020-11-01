@@ -893,7 +893,6 @@ export default class App extends Component {
              });
             }}/>
           </View>
-          <Logout title="Logout"/>
       </View>
       )
   }
@@ -924,28 +923,6 @@ TaskManager.defineTask(LOCATION_TASK_NAME, ({ data, error }) => {
     // console.log(`Location Recorded: [${timeStamp}]:\n[${latitude}, ${longitude}, ${direction}, ${speed}]`);
   }
 });
-
-/**
- * Logout button which helps redirect to login screen
- */
-function Logout() {
-  const auth = useContext(AuthenticationContext);
-  
-  return (
-    <TouchableOpacity style={[{ width: "35%", borderRadius: 10, backgroundColor: "#3b5998", paddingVertical: 3, }]} onPress={() => {
-      auth.actions.logout(auth.state.platform);
-    }}>
-      <Text style={[{
-        fontSize: 18,
-        color: "#fff",
-        fontWeight: "bold",
-        alignSelf: "center",
-        textTransform: "uppercase"
-      }]}>Logout</Text>
-
-    </TouchableOpacity>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
