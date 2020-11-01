@@ -174,21 +174,32 @@ function routeIntegrity (currentDirection,currentPosition,currentRoute) {
 
 	// Return variables
 	var updatedRoute = [];
+
 	var arrived = false;
 
 	// A route is invalid if only a single GPS point.  The routing will not run and the route will be cleared(same status as arrival).
 	if (currentRoute.length > 1) {
 
 		var startOfRoute = selectRouteStart(currentRoute,CHECKMAX);
+
 		var updatedFormat = convertToEdgeFormat(startOfRoute);
 
+		console.log("1");
 		if (updatedFormat.length > 1) {
 			const position = routeTools.findCurrentEdge(updatedFormat, currentPosition);
+
+			console.log("2 - position: ",position);
 			if (position != -1) {
 				// Non adjusted GPS values used here
 				const edgeOrientation = routeTools.findEdgeOrientation(updatedFormat[position], (currentPosition.latitude, currentPosition.longitude));
+				var diff = (Math.abs(edgeOrientation - currentDirection));
+				console.log("3 - Orientation diff: ",diff);
 				if ((Math.abs(edgeOrientation - currentDirection)) < MOE_Deg) {
+					
 					updatedRoute = currentRoute.splice(position);
+					// Updating the first edge's node 0, this makes the route update smoother as some of the 
+					// edges are really large which results in the route updating being jumpy.
+					updatedRoute[0] = {latitude:currentPosition[0],longitude:currentPosition[1]};
 				} 
 			}
 		}
@@ -198,10 +209,12 @@ function routeIntegrity (currentDirection,currentPosition,currentRoute) {
 			const position = routeTools.findCurrentEdge(updatedFormat, currentPosition);
 			if (position == 0) {
 				arrived = true;
+				console.log("5");
 			}
 		}
 	} else {
 		arrived = true;
+		console.log("6");
 	}
 
 	return {status : arrived, newRoute : updatedRoute};

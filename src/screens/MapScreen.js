@@ -72,6 +72,7 @@ export default class App extends Component {
         hazards:[],
         mapText:"",
         route:[],
+        displayingRoute:false,
         // intervalID: null, // No need just chuck just chuck usersLocationChange in onLocationUpdate
         logging: false,
         logFilename: "default",
@@ -203,7 +204,7 @@ export default class App extends Component {
     //On every 3 location updates, check route integrity
     if(this.state.routeCounter%5==0){
       this.validateRoute();
-      console.log("VALIDATING ROUTE");
+
       this.state.routeCounter = 1;
     }
     this.state.routeCounter = this.state.routeCounter + 1;
@@ -211,37 +212,44 @@ export default class App extends Component {
   }
 
   validateRoute = () => {
-    
-    if(this.state.route.length>0){
-      var routeCopy = [...this.state.route];
-      var routeToolsResponse = routeTools.routeIntegrity(this.state.direction,[this.state.latitude,this.state.longitude],routeCopy);
-      var updatedRoute = routeToolsResponse.newRoute;
-      var routeArrivalStatus = routeToolsResponse.status;
+    if(this.state.displayingRoute) {
+    //if(this.state.route.length>0){
+      console.log("Test2: Validating Route");
+      var routeCopy = [];
+      routeCopy = [...this.state.route];
 
-      // has arrival occurred? Or was the  route cancelled due to being too small?
+      var routeArrivalStatus = false;
+      var updatedRoute = [];
+      var routeToolsResponse = {};
+
+      var routeToolsResponse = routeTools.routeIntegrity(this.state.direction,[this.state.latitude,this.state.longitude],routeCopy);
+      
+      updatedRoute = routeToolsResponse.newRoute;
+      routeArrivalStatus = routeToolsResponse.status;
+
+      //has arrival occurred? Or was the  route cancelled due to being too small?
       if (routeArrivalStatus == true) {
           console.log("arrived");
           this.setState({
-            mapText:""
-          })
-          this.setState({
             route:[]
-          })
+          });
+          this.state.displayingRoute = false;
       } else {
 
           // route has been shrunk, update it.
           if(updatedRoute.length>0) {
-            console.log("updatedRoute.length>0");
+            console.log();
+            console.log("updatedRoute.length:",updatedRoute.length);
+            console.log(updatedRoute);
             //Update the route to the updated array
             this.setState({
               route:updatedRoute
-            })            
+            }); 
           // currentPosition was not in the route, and  arrival has not 
           // occurred, get a new route.
-          } else {
-            console.log("getting a new route");
+          } else {;
             //get a new route
-            this.getRoute(); 
+            this.getRoute();
           }
       }
     }
@@ -707,6 +715,7 @@ export default class App extends Component {
 
   getRoute = async () => {
     var startPoint = {latitude:this.state.latitude,longitude:this.state.longitude}
+    var routeCoordinates = undefined;
     var routeCoordinates = await routeRetriever(start=startPoint,end=this.state.mapText,currentOrientation=this.state.direction);
     //console.log(routeCoordinates);
     
@@ -872,12 +881,16 @@ export default class App extends Component {
           </View>
 
           <View style={styles.subContainer}>
-            <Button title="Test Element: Sound" onPress={() => {
-              return this.playSound(this);
+            <Button title="Enter Destination" onPress={() => {
+              this.state.displayingRoute = true;
+              return this.getRoute();
             }}/>
             <TextInput style={styles.textInput} onChangeText={this.handleRoute}/>
-            <Button title="Enter Destination" onPress={() => {
-              return this.getRoute();
+            <Button title="Remove route" onPress={() => {
+              this.state.displayingRoute = false;
+                this.setState({
+              route:[]
+             });
             }}/>
           </View>
           <Logout title="Logout"/>

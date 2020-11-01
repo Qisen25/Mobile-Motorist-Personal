@@ -232,7 +232,7 @@ test('routeIntegrity returns [] and false', () => {
 //MOCK: routeTools.findCurrentEdge, routeTools.findEdgeOrientation
 test('routeIntegrity returns [] and false', () => {
 	var currentRoute = [{latitude:1,longitude:1},{latitude:2,longitude:2},{latitude:3,longitude:3},{latitude:4,longitude:4},{latitude:5,longitude:5}];
-	var currentPosition = (1.5,1.5);
+	var currentPosition = [1.5,1.5];
 	
 	origFindCurrentEdge = routeTools.findCurrentEdge;
 	origFindEdgeOrientation = routeTools.findEdgeOrientation;
