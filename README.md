@@ -12,6 +12,43 @@ The aim of this application is to help provide users (specifically motorists) by
 6. Run the emulator
 7. Run `npm run android` in the project root
 
+# Installing Alert Package
+## Npm install
+Requires SSH keys to automatically download and install
+* If an access error occurs or ssh keys are not set up then manually download and install the alert package
+## Manual Download
+Download the package from [alert-system](https://github.com/Expektus/alert-system) link, then follow the installation guide to install the package
+
+# Building APK
+Follow the following instructions to build the android APK, commands assume in the root mobile-motorist directory
+```
+mkdir android/app/src/main/assets
+```
+Bundle up the assets
+```
+react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle
+```
+Build the apk
+```
+cd android
+// Windows
+gradlew assembleRelease
+// Linux/Mac
+./gradlew assembleRelease
+```
+APK is saved to
+```
+android/app/build/outputs/apk/app-release.apk
+```
+
+## Potential Build Errors
+### Duplicate assets:
+* Delete the duplicate assets
+```
+cd android/app/src/main/res
+rm -rf drawable*
+rm -rf raw
+```
 # Changelog
 
 1. (15/10/2020) - Fixed the heading (direction) inconsistency and jumps, seems to be stable now.
