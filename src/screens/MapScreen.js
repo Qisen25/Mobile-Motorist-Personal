@@ -192,6 +192,23 @@ export default class App extends Component {
     return false;
   }
 
+  /**
+   * Determines the radius value that the motorist should use for the cyclist query, based
+   * on a provided speed
+   * @param {Number} speed : The speed the motorist is going
+   * @ returns {Number} radius : The recommended radius for the provided speed
+   */
+  radiusCalculate(speed) {
+    let radius = 100;
+    if(speed <= 50.0) {
+      radius = 100;
+    }
+    else {
+      radius = 200;
+    }
+    return radius;
+  }
+
   onLocationUpdate = ({ latitude, longitude, speed, direction }) => {
     if(!this.state.playingLoadedRoute) {
       this.setState({
@@ -478,7 +495,8 @@ export default class App extends Component {
         'long': mockData.long,
         'lat': mockData.lat,
         'direction': mockData.direction,
-        'speed': mockData.speed
+        'speed': mockData.speed,
+        'radius': this.radiusCalculate(mockData.speed)
       };
 
       // Update state to show mock location of the map
@@ -499,7 +517,8 @@ export default class App extends Component {
         'long': this.state.longitude,
         'lat': this.state.latitude,
         'direction': this.state.direction,
-        'speed': this.state.speed
+        'speed': this.state.speed,
+        'radius': this.radiusCalculate(this.state.speed)
       };
     }
 
