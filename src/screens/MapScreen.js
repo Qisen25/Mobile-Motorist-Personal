@@ -213,7 +213,8 @@ export default class App extends Component {
   validateRoute = () => {
     
     if(this.state.route.length>0){
-      var routeToolsResponse = routeTools.routeIntegrity(this.state.direction,[this.state.latitude,this.state.longitude],this.state.route);
+      var routeCopy = [...this.state.route];
+      var routeToolsResponse = routeTools.routeIntegrity(this.state.direction,[this.state.latitude,this.state.longitude],routeCopy);
       var updatedRoute = routeToolsResponse.newRoute;
       var routeArrivalStatus = routeToolsResponse.status;
 
