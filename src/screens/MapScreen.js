@@ -82,6 +82,7 @@ export default class App extends Component {
         routeFile: "None",
         loadedRouteContents: [],
         loadedRouteMarker: 0,
+        testing: false
       }
   }
 
@@ -713,6 +714,118 @@ export default class App extends Component {
       </View>);
   }
 
+  changeThreshold(threshold){
+    this.collisionDetector.setThreshold(threshold);
+  }
+
+  drawDebugToggleButton = () => {
+    return (
+      <View style={styles.debugButtonStyle}>
+        {
+          this.state.testing &&
+          <TouchableOpacity onPress={async () => {
+              this.setState({testing: false});
+          }}>
+            <Image source={require("../../assets/debugOn.png")}
+                  style={{height: 30, width: 30}}/>
+          </TouchableOpacity>
+        }
+        {
+          !this.state.testing &&
+          <TouchableOpacity onPress={async () => {
+              this.setState({testing: true});
+          }}>
+            <Image source={require("../../assets/debugOff.png")}
+                  style={{height: 30, width: 30}}/>
+          </TouchableOpacity>
+        }
+      </View>);
+  }
+  drawLogging = () => {
+    return(
+      this.state.testing &&
+      <View style={styles.loggingStyle}>
+          {
+            this.state.logging &&
+            <Button title="Log"
+              color="#FF0000"
+              onPress={() => {this.setState({
+                logging: false
+              })}}/>
+          }
+          {
+            !this.state.logging &&
+            <Button title="Log"
+              color="#F4860B"
+              onPress={() => {this.setState({
+                logging: true
+              })}}/>
+          }
+          <TextInput style={styles.textInput} onSubmitEditing={(event) => {
+            this.state.logFilename = event.nativeEvent.text;
+          }}
+          placeholder={"Enter File Name"}/>
+      </View>);
+  }
+
+  drawReplay = () => {
+    return(
+      this.state.testing &&
+      <View style={styles.routePlayStyle}>
+          {
+            // Button to load the Route File
+            <TouchableOpacity onPress={async () => {
+                console.log("loading file");
+                try {
+                  // Let the User pick the file
+                  const response = await DocumentPicker.pick({
+                    type: [DocumentPicker.types.plainText],
+                  });
+
+                  // Load the selected file into memory
+                  RNFS.readFile(response.uri, 'utf8')
+                      .then((contents) => {
+                        this.setState({
+                          loadedRouteContents: contents.split("\n"),
+                          routeFile: response.name});
+                      })
+                      .catch((err) => {
+                        console.log(err.message);
+                      });
+                } catch (err) {
+                  if (DocumentPicker.isCancel(err)) {
+                  }
+                  else {
+                    console.log(err);
+                  }
+                }
+            }}>
+              <Image source={require("../../assets/load.png")}
+                    style={{height: 30, width: 30}}/>
+            </TouchableOpacity>
+          }
+          {
+            this.state.playingLoadedRoute &&
+            <TouchableOpacity onPress={async () => {
+                this.setState({playingLoadedRoute: false});
+            }}>
+              <Image source={require("../../assets/stop.png")}
+                    style={{height: 30, width: 30}}/>
+            </TouchableOpacity>
+          }
+          {
+            !this.state.playingLoadedRoute &&
+            <TouchableOpacity onPress={async () => {
+                this.setState({playingLoadedRoute: true});
+            }}>
+              <Image source={require("../../assets/play.png")}
+                    style={{height: 30, width: 30}}/>
+            </TouchableOpacity>
+          }
+          <Text style={styles.routeFileText}>{this.state.routeFile}</Text>
+    </View>);
+  }
+
   getRoute = async () => {
     var startPoint = {latitude:this.state.latitude,longitude:this.state.longitude}
     var routeCoordinates = undefined;
@@ -801,84 +914,16 @@ export default class App extends Component {
                   style={styles.hazardStyle}/>
               }
             </View>
-
-            <View
-              style={styles.loggingStyle}>
-                {
-                  this.state.logging &&
-                  <Button title="Log"
-                    color="#FF0000"
-                    onPress={() => {this.setState({
-                      logging: false
-                    })}}/>
-                }
-                {
-                  !this.state.logging &&
-                  <Button title="Log"
-                    color="#F4860B"
-                    onPress={() => {this.setState({
-                      logging: true
-                    })}}/>
-                }
-                <TextInput style={styles.textInput} onSubmitEditing={(event) => {
-                  this.state.logFilename = event.nativeEvent.text;
-                }}
-                placeholder={"Enter File Name"}/>
+            {
+              this.drawDebugToggleButton()
+            }
             </View>
-              <View style={styles.routePlayStyle}>
-                  {
-                    // Button to load the Route File
-                    <TouchableOpacity onPress={async () => {
-                        console.log("loading file");
-                        try {
-                          // Let the User pick the file
-                          const response = await DocumentPicker.pick({
-                            type: [DocumentPicker.types.plainText],
-                          });
-
-                          // Load the selected file into memory
-                          RNFS.readFile(response.uri, 'utf8')
-                              .then((contents) => {
-                                this.setState({
-                                  loadedRouteContents: contents.split("\n"),
-                                  routeFile: response.name});
-                              })
-                              .catch((err) => {
-                                console.log(err.message);
-                              });
-                        } catch (err) {
-                          if (DocumentPicker.isCancel(err)) {
-                          }
-                          else {
-                            console.log(err);
-                          }
-                        }
-                    }}>
-                      <Image source={require("../../assets/load.png")}
-                            style={{height: 30, width: 30}}/>
-                    </TouchableOpacity>
-                  }
-                  {
-                    this.state.playingLoadedRoute &&
-                    <TouchableOpacity onPress={async () => {
-                        this.setState({playingLoadedRoute: false});
-                    }}>
-                      <Image source={require("../../assets/stop.png")}
-                            style={{height: 30, width: 30}}/>
-                    </TouchableOpacity>
-                  }
-                  {
-                    !this.state.playingLoadedRoute &&
-                    <TouchableOpacity onPress={async () => {
-                        this.setState({playingLoadedRoute: true});
-                    }}>
-                      <Image source={require("../../assets/play.png")}
-                            style={{height: 30, width: 30}}/>
-                    </TouchableOpacity>
-                  }
-                  <Text style={styles.routeFileText}>{this.state.routeFile}</Text>
-            </View>
-          </View>
+            {
+              this.drawLogging()
+            }
+            {
+              this.drawReplay()
+            }
 
           <View style={styles.subContainer}>
             <Button title="Enter Destination" onPress={() => {
@@ -984,12 +1029,26 @@ const styles = StyleSheet.create({
   },
   loggingStyle:{
     position: "absolute",
+    top: "5%",
+    left: "2%",
+    flexDirection: "row"
+  },
+  debugButtonStyle:{
+    position: "absolute",
     top: "0%",
+    right: "0%",
+    flexDirection: "row"
+  },
+  temp:{
+    position: "absolute",
+    top: "0%",
+    left: "0%",
     flexDirection: "row"
   },
   routePlayStyle:{
     position: "absolute",
     top: "15%",
+    left: "2%",
     flexDirection: "row"
   },
   hazardStyle:{
