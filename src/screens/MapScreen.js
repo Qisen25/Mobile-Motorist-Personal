@@ -858,7 +858,7 @@ export default class App extends Component {
   getRoute = async () => {
     var startPoint = {latitude:this.state.latitude,longitude:this.state.longitude}
     var routeCoordinates = undefined;
-    var routeCoordinates = await routeRetriever(start=startPoint,end=this.state.mapText,currentOrientation=this.state.direction);
+    routeCoordinates = await routeRetriever(start=startPoint,end=this.state.mapText,currentOrientation=this.state.direction);
     //console.log(routeCoordinates);
     
     if (routeCoordinates != undefined) {
@@ -970,7 +970,6 @@ export default class App extends Component {
              });
             }}/>
           </View>
-          <Logout title="Logout"/>
       </View>
       )
   }
@@ -1001,28 +1000,6 @@ TaskManager.defineTask(LOCATION_TASK_NAME, ({ data, error }) => {
     // console.log(`Location Recorded: [${timeStamp}]:\n[${latitude}, ${longitude}, ${direction}, ${speed}]`);
   }
 });
-
-/**
- * Logout button which helps redirect to login screen
- */
-function Logout() {
-  const auth = useContext(AuthenticationContext);
-  
-  return (
-    <TouchableOpacity style={[{ width: "35%", borderRadius: 10, backgroundColor: "#3b5998", paddingVertical: 3, }]} onPress={() => {
-      auth.actions.logout(auth.state.platform);
-    }}>
-      <Text style={[{
-        fontSize: 18,
-        color: "#fff",
-        fontWeight: "bold",
-        alignSelf: "center",
-        textTransform: "uppercase"
-      }]}>Logout</Text>
-
-    </TouchableOpacity>
-  );
-}
 
 const styles = StyleSheet.create({
   container: {
