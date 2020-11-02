@@ -845,6 +845,16 @@ export default class App extends Component {
     </View>);
   }
 
+  drawMotoristStats = () => {
+    return(
+      this.state.testing &&
+      <View style={styles.motoristStats}>
+          <Text>{`Speed : ${this.state.speed.toFixed(2)}m/s`}</Text>
+          <Text>{`\tDirection : ${this.state.direction.toFixed(2)}\n(${this.state.latitude},${this.state.longitude})`}</Text>
+      </View>
+    );
+  }
+
   getRoute = async () => {
     var startPoint = {latitude:this.state.latitude,longitude:this.state.longitude}
     var routeCoordinates = undefined;
@@ -942,6 +952,9 @@ export default class App extends Component {
             }
             {
               this.drawReplay()
+            }
+            {
+              this.drawMotoristStats()
             }
 
           <View style={styles.subContainer}>
@@ -1067,6 +1080,12 @@ const styles = StyleSheet.create({
   routePlayStyle:{
     position: "absolute",
     top: "15%",
+    left: "2%",
+    flexDirection: "row"
+  },
+  motoristStats:{
+    position: "absolute",
+    top: "20%",
     left: "2%",
     flexDirection: "row"
   },
