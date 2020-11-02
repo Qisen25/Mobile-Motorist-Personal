@@ -716,7 +716,7 @@ export default class App extends Component {
   getRoute = async () => {
     var startPoint = {latitude:this.state.latitude,longitude:this.state.longitude}
     var routeCoordinates = undefined;
-    var routeCoordinates = await routeRetriever(start=startPoint,end=this.state.mapText,currentOrientation=this.state.direction);
+    routeCoordinates = await routeRetriever(start=startPoint,end=this.state.mapText,currentOrientation=this.state.direction);
     //console.log(routeCoordinates);
     
     if (routeCoordinates != undefined) {
