@@ -35,6 +35,11 @@ import DocumentPicker from 'react-native-document-picker';
 // For sound functionality, basic usage example from: https://github.com/zmxv/react-native-sound was used.
 import Sound from 'react-native-sound';
 
+import DropDownPicker from 'react-native-dropdown-picker';
+//var urljoin = require('url-join');
+import Icon from 'react-native-vector-icons/Feather';
+
+
 const LOCATION_TASK_NAME = "background-location-task";
 const LATITUDE_DELTA = 0.01;
 const LONGITUDE_DELTA = 0.01;
@@ -82,7 +87,8 @@ export default class App extends Component {
         routeFile: "None",
         loadedRouteContents: [],
         loadedRouteMarker: 0,
-        testing: false
+        testing: false,
+        selectedAudioAlert:0
       }
   }
 
@@ -100,7 +106,13 @@ export default class App extends Component {
       });
 
     };
-    const url = require('../../assets/done-for-you.mp3');
+    const SOUNDS = [
+      require('../../assets/bell.mp3'),
+      require('../../assets/done-for-you.mp3'),
+    ];
+
+    const audioNumber = this.state.selectedAudioAlert; 
+    const url = SOUNDS[audioNumber];
     const sound = new Sound(url,error => callback(error,sound));
   }
 
@@ -220,12 +232,12 @@ export default class App extends Component {
     }
 
     //On every 3 location updates, check route integrity
-    if(this.state.routeCounter%5==0){
-      this.validateRoute();
+    //if(this.state.routeCounter%5==0){
+    this.validateRoute();
 
-      this.state.routeCounter = 1;
-    }
-    this.state.routeCounter = this.state.routeCounter + 1;
+    //  this.state.routeCounter = 1;
+    //}
+    //this.state.routeCounter = this.state.routeCounter + 1;
     this.usersLocationChange(); // Moved from interval thing
   }
 
@@ -969,6 +981,22 @@ export default class App extends Component {
               route:[]
              });
             }}/>
+          <DropDownPicker
+              items={[
+                  {label: 'Bicycle bell', value: 0, icon: () => <Icon name="flag" size={18} color="#900" />},
+                  {label: 'Bell', value: 1, icon: () => <Icon name="flag" size={18} color="#900" />},
+              ]}
+              defaultValue={this.state.selectedAudioAlert}
+              containerStyle={{height: 40}}
+              style={{backgroundColor: '#fafafa'}}
+              itemStyle={{
+                  justifyContent: 'flex-start'
+              }}
+              dropDownStyle={{backgroundColor: '#fafafa'}}
+              onChangeItem={item => this.setState({
+                  selectedAudioAlert: item.value
+              })}
+          />
           </View>
       </View>
       )
