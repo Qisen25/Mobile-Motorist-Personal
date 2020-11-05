@@ -60,5 +60,7 @@ rm -rf raw
 2.	For each edge within the selected subsection, convert the edge from two nodes into a rectangle that has the same orientation.
 3.	Check if the motorist GPS position falls within the corresponding rectangle of one of the subsection edge.
 4.	If so compare the  orientation of the corresponding edge with the motorists orientation.  If the difference between these two orientations is below a certain threshold the motorist is determined to be within the route, and also following it. 
+![alt text](DocumentationFiles/RoutingAlg.png "Non updated route.")
 5.	Update the route so that the firsts edge is the edge that contains the motorist, and that the first node of this edge, is the motorist’s current position.   
+![alt text](DocumentationFiles/RoutingAlgUpdated.png "Updated route.")
 6.	Now replace the old subsection that was at the front of the route, with the updated subsection.  If throughout the above process, the motorist is not found within an edge, or is found within an edge, but has a orientation that is deemed to be significantly different, then request the Bing Maps API and generate a new route.
