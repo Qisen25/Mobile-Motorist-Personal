@@ -1,6 +1,6 @@
 # Motorist app
 
-The aim of this application is to help provide users (specifically motorists) by encouraging awareness and mindfulness of cyclists in surroundings. The application will retrieve telemetry of cyclists from the web services. The telemetry will be used to determine potential hazards and alert the user.
+The aim of this application is to help users (specifically motorists) to be more aware and mindful of cyclists in surroundings. The application will retrieve telemetry of cyclists from the web services. The telemetry will be used to determine potential hazards and alert the user.
 
 # How to run
 
