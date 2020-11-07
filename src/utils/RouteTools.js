@@ -2,13 +2,14 @@ import React from "react";
 import {
   multiply
 } from "mathjs";
-//import { TestScheduler } from "jest";
 
+// Description: adjust a point in it's two dimensions by arbitrary values.
 function adjustPoint(point, x_t, y_t) {
 	point = [point[0] + x_t, point[1] + y_t];
 	return point;
 }
 
+// Description: rotates a point from any position on the xy plane to the x axis.
 function rotateToXAxis(point) {
 	theta = Math.atan2(point[1], point[0]);
 	inv_theta = -1 * theta;
@@ -18,6 +19,7 @@ function rotateToXAxis(point) {
 	return rotatedPoint;
 }
 
+// Description: determines if an arbitrary point is within a rectangle defined by 4 points.
 function withinRectangle(rectangle, adjPoint) {
 	const top_left = rectangle.tl;
 	const bottom_left = rectangle.bl;
@@ -36,6 +38,9 @@ function withinRectangle(rectangle, adjPoint) {
 	return false;
 }
 
+// Description: Subtracts the values of node 0 of an edge from the values of node 1 of an edge
+// and from another point.  The effect is to translate node 1 and the point onto a plane where
+// node 0 is the origin.
 function adjustEdgeAndCurrent(edge, currentPoint) {
 	const n0 = edge[0];
 	const n1 = edge[1];
@@ -47,6 +52,9 @@ function adjustEdgeAndCurrent(edge, currentPoint) {
 	return { edge: [[0, 0], adj_n1], currentPoint: adj_nCP };
 }
 
+// Description: rotates an edge to be aligned with the positive x axis, and rotates a point
+// to be aligned with the positive x axis.  A requirement of this function is that node 0
+// of the edge should be (0,0), and thus acting as the relative origin.
 function rotateEdgeAndCurrent(edge, currentPoint) {
 	n0 = edge[0];
 	adj_n1 = edge[1];
@@ -58,6 +66,8 @@ function rotateEdgeAndCurrent(edge, currentPoint) {
 	return { edge: [[0, 0], rot_n1], currentPoint: rot_nCP };
 }
 
+// Description: convert an edge into a rectangle by expanding it's verticle dimension
+// up and down.  This function expects the edge to be starting on the positive x axis.
 function createRectangle(edge, adj_translation) {
 	rot_n0 = edge[0];
 	rot_n1 = edge[1];
@@ -71,7 +81,7 @@ function createRectangle(edge, adj_translation) {
 	return { tl: top_left, bl: bottom_left, tr: top_right, br: bottom_right };
 }
 
-// Non Adjusted GPS values
+// Description: calculate the orientation of an edge using non adjusted GPS values.
 function findEdgeOrientation(edge) {
 	n0 = edge[0];
 	n1 = edge[1];
@@ -91,7 +101,8 @@ function findEdgeOrientation(edge) {
 	return degrees;
 }
 
-
+// Description: search through a list of edges and check if the current point falls within the 
+// rectangle constructed about each edge.
 function findCurrentEdge(startOfRoute, currentPoint) {
 	const GPSADJUSTER = 111139;
 	//Margin of Error for Metres
@@ -123,6 +134,7 @@ function findCurrentEdge(startOfRoute, currentPoint) {
 	return position;
 }
 
+// Description: select up to the first x edges of a route.
 function selectRouteStart(currentRoute,checkMax){
 	counter = 0;
 	startOfRoute = [];
@@ -139,6 +151,7 @@ function selectRouteStart(currentRoute,checkMax){
 	return startOfRoute;
 }
 
+// Description: convert the edge format to format [[edge][edge]...], where edge = [[lat, long],[lat, long]]
 function convertToEdgeFormat(startOfRoute){
 	counter = 0;
 	arrayFormat = [];
@@ -166,6 +179,15 @@ function convertToEdgeFormat(startOfRoute){
 	return edgeFormat;
 }
 
+// Description: check the integrity of a route, is the user following it?  First make sure the route is more than a single node
+// then select a sub section of the start of the route.  Next check if the current GPS location falls within any of these edges.
+// If it does, then compare the orientation of this edge and the current orientation of the user.  
+// If the current location falls within an edge and the difference in the edge bearing and user bearing is below a threshold
+// then the user is contained within the route.
+// Else, if the user is not found within an edge, or the bearing difference is above a threshold, the route is deemed to 
+// not have integrity.
+// If the route is ever a single GPS point, or if the route consists of a single edge and the user is contained within this edge
+// then the user is deemed to have arrived at the end of their route.
 function routeIntegrity (currentDirection,currentPosition,currentRoute) {
 	// Margin of Error for Orientation
 	const MOE_Deg = 10.0;
