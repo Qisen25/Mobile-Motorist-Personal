@@ -1,11 +1,12 @@
 import React from "react";
 
-
+// Description: retrieve a route from the Bing Maps api.
 const routeRetriever = async function(start, end, currentOrientation) {
     if( end != "" ) {
       tokens = end.split(" ");
       searchTarget = "";
-  
+    
+      // convert to the correct format.
       for(i = 0 ; i < ( tokens.length - 1 ) ; i++)
       {
         searchTarget = searchTarget + tokens[i] + "%20";
