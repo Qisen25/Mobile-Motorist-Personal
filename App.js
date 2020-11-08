@@ -49,7 +49,7 @@ export default function App() {
 
      // On message websocket connects then able to retrieve profile info
      // Im not expert with react native, soz if this is not convention but it works
-      ws.ws.onmessage = message => {
+      ws.ws.addEventListener("message", function(message) {
         let data = JSON.parse(message.data);
 
         if (data.type === "profile") {
@@ -72,7 +72,7 @@ export default function App() {
             platform
           });
         }
-      }
+      });
 
       ws.ws.onopen = event => {
         ws.send({ type: "profile"});
